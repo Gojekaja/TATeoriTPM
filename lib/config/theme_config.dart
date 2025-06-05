@@ -13,32 +13,28 @@ class ThemeConfig {
 
   // Text Styles
   static TextStyle get headingStyle => GoogleFonts.inter(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      );
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
 
   static TextStyle get titleStyle => GoogleFonts.inter(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      );
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
 
-  static TextStyle get bodyStyle => GoogleFonts.inter(
-        fontSize: 16,
-        color: Colors.white,
-      );
+  static TextStyle get bodyStyle =>
+      GoogleFonts.inter(fontSize: 16, color: Colors.white);
 
-  static TextStyle get subtitleStyle => GoogleFonts.inter(
-        fontSize: 14,
-        color: Colors.grey[400],
-      );
+  static TextStyle get subtitleStyle =>
+      GoogleFonts.inter(fontSize: 14, color: Colors.grey[400]);
 
   static TextStyle get buttonTextStyle => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      );
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
 
   // Input Decoration
   static InputDecoration getInputDecoration({
@@ -83,50 +79,44 @@ class ThemeConfig {
 
   // Button Styles
   static ButtonStyle get primaryButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        textStyle: buttonTextStyle,
-        elevation: 2,
-      );
+    backgroundColor: primaryColor,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    textStyle: buttonTextStyle,
+    elevation: 2,
+  );
 
   static ButtonStyle get secondaryButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: surfaceColor,
-        foregroundColor: primaryColor,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        textStyle: buttonTextStyle.copyWith(color: primaryColor),
-        elevation: 1,
-      );
+    backgroundColor: surfaceColor,
+    foregroundColor: primaryColor,
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    textStyle: buttonTextStyle.copyWith(color: primaryColor),
+    elevation: 1,
+  );
 
   static ButtonStyle get dangerButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: errorColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        textStyle: buttonTextStyle,
-        elevation: 2,
-      );
+    backgroundColor: errorColor,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    textStyle: buttonTextStyle,
+    elevation: 2,
+  );
 
   // Card Style
   static BoxDecoration get cardDecoration => BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(51),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      );
+    color: surfaceColor,
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withAlpha(51),
+        blurRadius: 8,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
 
   // Common Spacing
   static const double spacingXs = 4.0;
@@ -146,8 +136,10 @@ class ThemeConfig {
 
   // Common Paddings
   static const EdgeInsets paddingAll = EdgeInsets.all(spacingMd);
-  static const EdgeInsets paddingHorizontal =
-      EdgeInsets.symmetric(horizontal: spacingMd);
-  static const EdgeInsets paddingVertical =
-      EdgeInsets.symmetric(vertical: spacingMd);
+  static const EdgeInsets paddingHorizontal = EdgeInsets.symmetric(
+    horizontal: spacingMd,
+  );
+  static const EdgeInsets paddingVertical = EdgeInsets.symmetric(
+    vertical: spacingMd,
+  );
 }

@@ -3,8 +3,11 @@ import 'dart:async';
 import 'event_bus.dart';
 
 class ErrorHandler {
-  static void handleError(BuildContext context, dynamic error,
-      {String? title}) {
+  static void handleError(
+    BuildContext context,
+    dynamic error, {
+    String? title,
+  }) {
     // Log error
     debugPrint('Error occurred: $error');
 
@@ -44,9 +47,8 @@ class ErrorHandler {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
         );
       }
 

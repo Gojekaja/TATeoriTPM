@@ -12,10 +12,10 @@ class PasswordHasher {
       // Add a consistent salt to make hashing more secure
       final salt = "MILLIONAIRE_GAME_SALT";
       final saltedPassword = password + salt;
-      
+
       final bytes = utf8.encode(saltedPassword);
       final hash = sha256.convert(bytes);
-      
+
       debugPrint('Password hashed successfully');
       return hash.toString();
     } catch (e, stackTrace) {
@@ -33,7 +33,7 @@ class PasswordHasher {
 
       final hashedInput = hashPassword(password);
       final isMatch = hashedInput == hashedPassword;
-      
+
       debugPrint('Password verification result: $isMatch');
       return isMatch;
     } catch (e, stackTrace) {
@@ -43,5 +43,3 @@ class PasswordHasher {
     }
   }
 }
-
-

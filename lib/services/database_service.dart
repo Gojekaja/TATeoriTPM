@@ -57,7 +57,7 @@ class DatabaseService {
         // Optional: Add encryption key for sensitive data
         // encryptionCipher: HiveAesCipher(encryptionKey),
       );
-      
+
       _gameStatsBox = await Hive.openBox<Map>(DatabaseConfig.gameStatsBox);
       _settingsBox = await Hive.openBox<Map>(DatabaseConfig.settingsBox);
       _storeBox = await Hive.openBox<StoreItem>(DatabaseConfig.storeBox);
