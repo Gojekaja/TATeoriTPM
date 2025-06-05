@@ -58,57 +58,57 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   String? _validateUsername(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your username';
+      return 'Silakan masukkan username Anda';
     }
     final trimmedValue = value.trim();
     if (trimmedValue.length < 3) {
-      return 'Username must be at least 3 characters';
+      return 'Username harus minimal 3 karakter';
     }
     if (trimmedValue.length > 10) {
-      return 'Username must be no more than 10 characters';
+      return 'Username maksimal 10 karakter';
     }
     final regex = RegExp(r'^[a-zA-Z0-9_]+$');
     if (!regex.hasMatch(trimmedValue)) {
-      return 'Username can only contain letters, numbers, and underscores';
+      return 'Username hanya boleh berisi huruf, angka, dan garis bawah';
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email';
+      return 'Silakan masukkan email Anda';
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
-      return 'Please enter a valid email address';
+      return 'Silakan masukkan alamat email yang valid';
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter your password';
+      return 'Silakan masukkan password Anda';
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return 'Password harus minimal 8 karakter';
     }
     if (value.length > 10) {
-      return 'Password must be no more than 10 characters';
+      return 'Password maksimal 10 karakter';
     }
     if (!RegExp(r'[0-9]').hasMatch(value)) {
-      return 'Password must contain at least one number';
+      return 'Password harus mengandung minimal satu angka';
     }
     if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
-      return 'Password must contain at least one letter';
+      return 'Password harus mengandung minimal satu huruf';
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
+      return 'Silakan konfirmasi password Anda';
     }
     if (value != _passwordController.text) {
-      return 'Passwords do not match';
+      return 'Password tidak cocok';
     }
     return null;
   }
@@ -125,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     });
 
     try {
-      debugPrint('Starting registration process...');
+      debugPrint('Memulai proses registrasi...');
       debugPrint('Username: ${_usernameController.text}');
       debugPrint('Email: ${_emailController.text}');
 
@@ -136,7 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         email: _emailController.text.trim(),
       );
 
-      debugPrint('Registration successful');
+      debugPrint('Registrasi berhasil');
 
       if (!mounted) return;
 
@@ -148,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
-                  'Account created successfully!',
+                  'Akun berhasil dibuat!',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -220,17 +220,17 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   String _getReadableErrorMessage(String error) {
     if (error.toLowerCase().contains('network')) {
-      return 'Network error. Please check your connection.';
+      return 'Kesalahan jaringan. Silakan periksa koneksi Anda.';
     } else if (error.toLowerCase().contains('email')) {
-      return 'Email address is already in use.';
+      return 'Alamat email sudah digunakan.';
     } else if (error.toLowerCase().contains('username')) {
-      return 'Username is already taken.';
+      return 'Username sudah digunakan.';
     } else if (error.toLowerCase().contains('password')) {
-      return 'Password requirements not met.';
+      return 'Persyaratan password tidak terpenuhi.';
     } else if (error.toLowerCase().contains('timeout')) {
-      return 'Request timed out. Please try again.';
+      return 'Permintaan timeout. Silakan coba lagi.';
     } else {
-      return 'Registration failed. Please try again.';
+      return 'Registrasi gagal. Silakan coba lagi.';
     }
   }
 
@@ -413,7 +413,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         _buildTextField(
                           controller: _usernameController,
                           label: 'Username',
-                          helperText: '3-10 characters only',
+                          helperText: 'karakter hanya 3-10',
                           maxLength: 10,
                           prefixIcon: Icons.person_outline,
                           textInputAction: TextInputAction.next,
@@ -434,7 +434,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         _buildTextField(
                           controller: _passwordController,
                           label: 'Password',
-                          helperText: '8-10 characters, letters and numbers',
+                          helperText: '8-10 karakter, huruf dan angka',
                           maxLength: 10,
                           prefixIcon: Icons.lock_outline,
                           obscureText: _obscurePassword,
@@ -452,7 +452,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         _buildTextField(
                           controller: _confirmPasswordController,
                           label: 'Confirm Password',
-                          helperText: 'Re-enter your password',
+                          helperText: 'Masukkan ulang password Anda',
                           maxLength: 10,
                           prefixIcon: Icons.lock_outline,
                           obscureText: _obscureConfirmPassword,
@@ -550,7 +550,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        'Creating Account...',
+                                        'Membuat Akun...',
                                         style: GoogleFonts.inter(
                                           color: Colors.white,
                                           fontSize: 16,
@@ -568,7 +568,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Create Account',
+                                        'Buat Akun',
                                         style: GoogleFonts.inter(
                                           color: Colors.white,
                                           fontSize: 16,
@@ -619,7 +619,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Already have an account? ',
+                              'Sudah punya akun? ',
                               style: GoogleFonts.inter(
                                 color: Colors.white60,
                                 fontSize: 14,
@@ -645,7 +645,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                         // Footer
                         Text(
-                          'By creating an account, you agree to our Terms of Service',
+                          'Dengan membuat akun, Anda setuju dengan Syarat dan Ketentuan Kami',
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.4),
                             fontSize: 12,

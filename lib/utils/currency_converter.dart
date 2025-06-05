@@ -10,6 +10,11 @@ class CurrencyConverter {
   static const double idrToCny = 0.00047; // Chinese Yuan
   static const double idrToKrw = 0.086; // South Korean Won
   static const double idrToInr = 0.0054; // Indian Rupee
+  static const double idrToUsd = 0.000064; // US Dollar
+  static const double idrToCad = 0.000087; // Canadian Dollar
+  static const double idrToNzd = 0.00011; // New Zealand Dollar
+  static const double idrToChf = 0.000058; // Swiss Franc
+  static const double idrToHkd = 0.00050; // Hong Kong Dollar
 
   // Convert game dolar to IDR
   static double dolarToRupiah(double dolar) => dolar * dolarToIdr;
@@ -24,6 +29,11 @@ class CurrencyConverter {
   static double toCny(double idr) => idr * idrToCny;
   static double toKrw(double idr) => idr * idrToKrw;
   static double toInr(double idr) => idr * idrToInr;
+  static double toUsd(double idr) => idr * idrToUsd;
+  static double toCad(double idr) => idr * idrToCad;
+  static double toNzd(double idr) => idr * idrToNzd;
+  static double toChf(double idr) => idr * idrToChf;
+  static double toHkd(double idr) => idr * idrToHkd;
 
   // Format currency with symbol following local conventions
   static String formatIdr(double amount) {
@@ -77,6 +87,26 @@ class CurrencyConverter {
     return '₹$wholePart.${parts[1]}';
   }
 
+  static String formatUsd(double amount) {
+    return '\$${amount.toStringAsFixed(2)}';
+  }
+
+  static String formatCad(double amount) {
+    return 'C\$${amount.toStringAsFixed(2)}';
+  }
+
+  static String formatNzd(double amount) {
+    return 'NZ\$${amount.toStringAsFixed(2)}';
+  }
+
+  static String formatChf(double amount) {
+    return 'CHF ${amount.toStringAsFixed(2)}';
+  }
+
+  static String formatHkd(double amount) {
+    return 'HK\$${amount.toStringAsFixed(2)}';
+  }
+
   static String formatDolar(double amount) {
     return '${amount.toStringAsFixed(0)} Dolar';
   }
@@ -87,13 +117,18 @@ class CurrencyConverter {
     return {
       'Dolar': formatDolar(dolarAmount),
       'IDR': formatIdr(idrAmount),
-      'MYR': formatMyr(toMyr(idrAmount)),
-      'SGD': formatSgd(toSgd(idrAmount)),
+      'USD': formatUsd(toUsd(idrAmount)),
       'EUR': formatEur(toEur(idrAmount)),
       'GBP': formatGbp(toGbp(idrAmount)),
       'JPY': formatJpy(toJpy(idrAmount)),
       'AUD': formatAud(toAud(idrAmount)),
+      'CAD': formatCad(toCad(idrAmount)),
+      'SGD': formatSgd(toSgd(idrAmount)),
+      'CHF': formatChf(toChf(idrAmount)),
+      'HKD': formatHkd(toHkd(idrAmount)),
       'CNY': formatCny(toCny(idrAmount)),
+      'NZD': formatNzd(toNzd(idrAmount)),
+      'MYR': formatMyr(toMyr(idrAmount)),
       'KRW': formatKrw(toKrw(idrAmount)),
       'INR': formatInr(toInr(idrAmount)),
     };

@@ -4,12 +4,13 @@ import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'config/theme_config.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   try {
     // Ensure Flutter is initialized
     WidgetsFlutterBinding.ensureInitialized();
-
+    await dotenv.load(fileName: ".env");
     // Initialize Hive and clear any corrupted data
     await Hive.initFlutter();
 

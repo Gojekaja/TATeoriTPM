@@ -22,7 +22,7 @@ class ProfileService {
 
       if (username != null && username != oldUsername) {
         if (_db.userBox.containsKey(username)) {
-          throw Exception('Username already exists');
+          throw Exception('Username sudah ada');
         }
         usernameChanged = true;
         user.username = username;

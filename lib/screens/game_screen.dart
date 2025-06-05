@@ -20,7 +20,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   QuizQuestion? _currentQuestion;
   Map<String, String> _displayOptions = {};
   bool _isLoading = false;
-  String _message = "Ready to become a millionaire?";
+  String _message = "Siap menjadi miliarder?";
   bool _isCelebrating = false;
   String? _selectedAnswer;
   bool _canAnswer = true;
@@ -75,7 +75,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Future<void> _startGame() async {
     setState(() {
       _isLoading = true;
-      _message = "Starting new game...";
+      _message = "Memulai permainan baru...";
       _isCelebrating = false;
     });
 
@@ -86,7 +86,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _message = "Error starting game: $e";
+        _message = "Error memulai permainan: $e";
       });
     }
   }
@@ -101,7 +101,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     try {
       if (_currentQuestion == null) {
-        throw Exception("Tidak ada pertanyaan saat ini untuk memeriksa jawaban.");
+        throw Exception(
+          "Tidak ada pertanyaan saat ini untuk memeriksa jawaban.",
+        );
       }
       final result = await _gameService.checkAnswer(_currentQuestion!.id, key);
 
@@ -122,7 +124,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       await _gameService.handleCorrectAnswer();
 
       setState(() {
-        _message = "Correct! Moving to next level!";
+        _message = "Benar! Pindah ke level berikutnya!";
         // Only show confetti when completing level 12
         _isCelebrating = _gameService.currentLevel == 12;
       });
@@ -145,7 +147,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _message = "Error checking answer: $e";
+        _message = "Error memeriksa jawaban: $e";
       });
     }
   }
@@ -169,7 +171,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _message = "Error loading next question: $e";
+        _message = "Error memuat pertanyaan berikutnya: $e";
       });
     }
   }
@@ -178,7 +180,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Future<void> _usePowerUp(String powerUpType) async {
     if (_currentQuestion == null || !_canAnswer) {
       setState(() {
-        _message = "Tidak dapat menggunakan power-up sekarang. Silakan jawab pertanyaan saat ini";
+        _message =
+            "Tidak dapat menggunakan power-up sekarang. Silakan jawab pertanyaan saat ini";
       });
       return;
     }
@@ -186,7 +189,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     // Add this guard:
     if (_gameService.authService.currentUser == null) {
       setState(() {
-        _message = "Anda belum login. Silakan login untuk menggunakan power-up.";
+        _message =
+            "Anda belum login. Silakan login untuk menggunakan power-up.";
       });
       return;
     }
@@ -229,17 +233,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           break;
         default:
           setState(() {
-            _message = "Unknown power-up.";
+            _message = "Power-up tidak dikenal.";
           });
       }
-      
-      setState(() {
-  
-      });
+
+      setState(() {});
     } catch (e) {
       setState(() {
-        _message =
-            "Power-up failed: ${e.toString()}"; 
+        _message = "Power-up gagal: ${e.toString()}";
       });
     }
   }
@@ -252,7 +253,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         backgroundColor: Colors.grey[900],
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Play Again?',
+          'Main Lagi?',
           style: GoogleFonts.poppins(
             color: Colors.red[400],
             fontSize: 28,
@@ -653,7 +654,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "CURRENT PRIZE",
+                    "HADIAH SAAT INI",
                     style: GoogleFonts.poppins(
                       color: Colors.grey[400],
                       fontSize: 12,
@@ -732,19 +733,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final availableWidth = constraints.maxWidth;
-                      final spacing = (availableWidth - (24 * 12)) / 11; // Calculate dynamic spacing
+                      final spacing =
+                          (availableWidth - (24 * 12)) /
+                          11; // Calculate dynamic spacing
 
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: List.generate(12, (index) {
                           final level = index + 1;
-                          final isCheckpoint = GameService.checkpointLevels.contains(level);
+                          final isCheckpoint = GameService.checkpointLevels
+                              .contains(level);
                           final isActive = level <= _gameService.currentLevel;
                           final isCurrent = level == _gameService.currentLevel;
                           final isFinalLevel = level == 12;
 
                           // Adjust sizes to be smaller
-                          final baseSize = isFinalLevel ? 28.0 : (isCheckpoint ? 24.0 : 20.0);
+                          final baseSize = isFinalLevel
+                              ? 28.0
+                              : (isCheckpoint ? 24.0 : 20.0);
 
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
@@ -772,8 +778,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                         color: isFinalLevel
                                             ? Colors.purple.withOpacity(0.4)
                                             : isCheckpoint
-                                                ? Colors.green.withOpacity(0.4)
-                                                : Colors.amber.withOpacity(0.4),
+                                            ? Colors.green.withOpacity(0.4)
+                                            : Colors.amber.withOpacity(0.4),
                                         blurRadius: isCurrent ? 8 : 4,
                                         spreadRadius: isCurrent ? 2 : 0,
                                       ),
@@ -793,14 +799,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   Icon(
                                     Icons.star,
                                     color: Colors.white,
-                                    size: isCheckpoint ? 12 : 10, // Reduced sizes
+                                    size: isCheckpoint
+                                        ? 12
+                                        : 10, // Reduced sizes
                                   )
                                 else
                                   Text(
                                     '$level',
                                     style: GoogleFonts.poppins(
-                                      color: isActive ? Colors.white : Colors.grey[400],
-                                      fontSize: isFinalLevel ? 10 : (isCheckpoint ? 9 : 8), // Reduced font sizes
+                                      color: isActive
+                                          ? Colors.white
+                                          : Colors.grey[400],
+                                      fontSize: isFinalLevel
+                                          ? 10
+                                          : (isCheckpoint
+                                                ? 9
+                                                : 8), // Reduced font sizes
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1100,7 +1114,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Tombol Power-Up (menggunakan PopupMenuButton)
           PopupMenuButton<String>(
             icon: const Icon(Icons.flash_on_rounded, color: Colors.amber),
-            tooltip: 'Use Power-Up',
+            tooltip: 'Gunakan Power-Up',
             onSelected: (String result) {
               _usePowerUp(result);
             },
@@ -1172,7 +1186,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   title: Text(
-                    'Restart Game?',
+                    'Restart Permainan?',
                     style: GoogleFonts.poppins(
                       color: Colors.amber,
                       fontSize: 24,
@@ -1181,7 +1195,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     textAlign: TextAlign.center,
                   ),
                   content: Text(
-                    'Are you sure you want to restart the game? Your current progress will be lost.',
+                    'Apakah kamu yakin ingin memulai ulang permainan? Progres saat ini akan hilang.',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 16,

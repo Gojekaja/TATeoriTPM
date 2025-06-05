@@ -117,17 +117,17 @@ class ScaffoldWithNavBar extends StatelessWidget {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.store, color: Colors.grey),
-            selectedIcon: Icon(Icons.store, color: Colors.amber),
+            selectedIcon: Icon(Icons.store, color: Colors.white),
             label: 'Store',
           ),
           NavigationDestination(
             icon: Icon(Icons.gamepad, color: Colors.grey),
-            selectedIcon: Icon(Icons.gamepad, color: Colors.amber),
+            selectedIcon: Icon(Icons.gamepad, color: Colors.white),
             label: 'Game',
           ),
           NavigationDestination(
             icon: Icon(Icons.person, color: Colors.grey),
-            selectedIcon: Icon(Icons.person, color: Colors.amber),
+            selectedIcon: Icon(Icons.person, color: Colors.white),
             label: 'Profile',
           ),
         ],

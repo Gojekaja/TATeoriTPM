@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/store_item.dart';
 import '../models/user.dart';
 import '../utils/currency_converter.dart';
@@ -17,24 +18,115 @@ class StoreService {
   StoreService._internal();
 
   Future<void> init() async {
-    // Register the StoreItem adapter
-    if (!Hive.isAdapterRegistered(4)) {
-      Hive.registerAdapter(StoreItemAdapter());
+    try {
+      print('Starting store initialization...');
+
+      // Initialize Hive if needed
+      try {
+        print('Ensuring Hive is initialized...');
+        await Hive.initFlutter();
+      } catch (e) {
+        print('Hive already initialized');
+      }
+
+      // Register the StoreItem adapter
+      if (!Hive.isAdapterRegistered(4)) {
+        print('Registering StoreItem adapter...');
+        Hive.registerAdapter(StoreItemAdapter());
+        print('StoreItem adapter registered successfully');
+      }
+
+      try {
+        // Open the store box
+        print('Opening store box...');
+        _storeBox = await Hive.openBox<StoreItem>('store_items');
+        print(
+          'Store box opened successfully. Items count: ${_storeBox.length}',
+        );
+
+        // Initialize default items if empty
+        if (_storeBox.isEmpty) {
+          print('Store box is empty, initializing default items...');
+          await _initializeDefaultItems();
+          print(
+            'Default items initialized successfully. New count: ${_storeBox.length}',
+          );
+        } else {
+          print('Store already has items: ${_storeBox.length}');
+          // Verify items are valid
+          final topUpItems = getTopUpItems();
+          final powerUpItems = getPowerUpItems();
+          print(
+            'Found ${topUpItems.length} top-up items and ${powerUpItems.length} power-up items',
+          );
+
+          if (topUpItems.isEmpty && powerUpItems.isEmpty) {
+            print('No valid items found, resetting store...');
+            await resetStore();
+          }
+        }
+      } catch (boxError) {
+        print('Error with store box: $boxError');
+        print('Attempting to recover...');
+        await resetStore();
+      }
+    } catch (e, stackTrace) {
+      print('Critical error in store initialization:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
+  }
 
-    // Open the store box
-    _storeBox = await Hive.openBox<StoreItem>('store_items');
+  Future<void> resetStore() async {
+    try {
+      print('Starting store reset...');
 
-    // Initialize default items if empty
-    if (_storeBox.isEmpty) {
+      // Close the box if it's open
+      if (_storeBox != null && _storeBox.isOpen) {
+        print('Closing existing store box...');
+        await _storeBox.close();
+      }
+
+      // Delete the store box from disk
+      print('Deleting store box from disk...');
+      await Hive.deleteBoxFromDisk('store_items');
+      print('Store box deleted successfully');
+
+      // Reopen the box
+      print('Reopening store box...');
+      _storeBox = await Hive.openBox<StoreItem>('store_items');
+      print('Store box reopened successfully');
+
+      // Initialize with default items
+      print('Adding default items...');
       await _initializeDefaultItems();
+      print('Store reset complete. Store has ${_storeBox.length} items');
+    } catch (e, stackTrace) {
+      print('Error during store reset:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
   Future<void> _initializeDefaultItems() async {
-    final defaultItems = StoreItem.getDefaultItems();
-    for (var item in defaultItems) {
-      await _storeBox.put(item.id, item);
+    try {
+      print('Getting default items...');
+      final defaultItems = StoreItem.getDefaultItems();
+      print('Retrieved ${defaultItems.length} default items');
+
+      for (var item in defaultItems) {
+        print('Adding item: ${item.id} - ${item.name} (${item.type})');
+        await _storeBox.put(item.id, item);
+      }
+
+      print('All default items added successfully');
+    } catch (e, stackTrace) {
+      print('Error initializing default items:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -116,15 +208,34 @@ class StoreService {
   }
 
   List<StoreItem> getTopUpItems() {
-    return _storeBox.values.where((item) => item.type == 'top_up').toList();
+    final items = _storeBox.values
+        .where((item) => item.type == 'top_up')
+        .toList();
+    print('Found ${items.length} top-up items');
+    return items;
   }
 
   List<StoreItem> getPowerUpItems() {
-    return _storeBox.values.where((item) => item.type == 'power_up').toList();
+    final items = _storeBox.values
+        .where((item) => item.type == 'power_up')
+        .toList();
+    print('Found ${items.length} power-up items');
+    return items;
   }
+
   Future<String> getLocalizedPrice(double dolarAmount) async {
-    final idrAmount = CurrencyConverter.dolarToRupiah(dolarAmount);
-    final countryCode = await LocalizationHelper.detectCountryCode();
-    return '${CurrencyConverter.formatDolar(dolarAmount)} (${LocalizationHelper.formatLocalPrice(idrAmount.toInt(), countryCode)})';
+    try {
+      final idrAmount = CurrencyConverter.dolarToRupiah(dolarAmount);
+      final countryCode = await LocalizationHelper.detectCountryCode();
+      final dolarText = CurrencyConverter.formatDolar(dolarAmount);
+      final localPrice = LocalizationHelper.formatLocalPrice(
+        idrAmount.toInt(),
+        countryCode,
+      );
+      return '$dolarText ($localPrice)';
+    } catch (e) {
+      // If anything fails, just show the dolar amount
+      return CurrencyConverter.formatDolar(dolarAmount);
+    }
   }
 }

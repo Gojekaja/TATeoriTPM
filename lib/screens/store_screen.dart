@@ -58,21 +58,58 @@ class _StoreScreenState extends State<StoreScreen>
   Future<void> _loadStoreItems() async {
     setState(() => _isLoading = true);
     try {
+      print('Memuat item toko...');
       await _storeService.init();
-      setState(() {
-        _topUpItems = _storeService.getTopUpItems();
-        _powerUpItems = _storeService.getPowerUpItems();
-        _isLoading = false;
-      });
+
+      final topUpItems = _storeService.getTopUpItems();
+      final powerUpItems = _storeService.getPowerUpItems();
+
+      print(
+        'Memuat ${topUpItems.length} item top-up dan ${powerUpItems.length} item power-up',
+      );
+
+      // If no items are loaded, try resetting the store
+      if (topUpItems.isEmpty && powerUpItems.isEmpty) {
+        print('Tidak ada item, mencoba reset toko...');
+        await _storeService.resetStore();
+
+        // Try loading items again after reset
+        final resetTopUpItems = _storeService.getTopUpItems();
+        final resetPowerUpItems = _storeService.getPowerUpItems();
+
+        if (resetTopUpItems.isEmpty && resetPowerUpItems.isEmpty) {
+          throw Exception(
+            'Item toko tidak dapat dimuat meskipun sudah direset',
+          );
+        }
+
+        setState(() {
+          _topUpItems = resetTopUpItems;
+          _powerUpItems = resetPowerUpItems;
+        });
+      } else {
+        setState(() {
+          _topUpItems = topUpItems;
+          _powerUpItems = powerUpItems;
+        });
+      }
+
+      setState(() => _isLoading = false);
 
       // Start animations
       _fadeAnimController.forward();
       await Future.delayed(const Duration(milliseconds: 200));
       _slideAnimController.forward();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error memuat item toko:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorSnackBar('Error loading store: $e');
+        _showErrorSnackBar(
+          'Gagal memuat item toko. Silakan coba lagi. Jika masalah tetap terjadi, restart aplikasi.',
+        );
       }
     }
   }
@@ -80,9 +117,21 @@ class _StoreScreenState extends State<StoreScreen>
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.poppins(color: Colors.white)),
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Coba Lagi',
+          textColor: Colors.white,
+          onPressed: _loadStoreItems,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
@@ -123,7 +172,7 @@ class _StoreScreenState extends State<StoreScreen>
                     const CircularProgressIndicator(color: Colors.amber),
                     const SizedBox(height: 16),
                     Text(
-                      'Processing purchase...',
+                      'Memproses pembelian...',
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 16,
@@ -146,7 +195,7 @@ class _StoreScreenState extends State<StoreScreen>
                   Icon(Icons.error_outline, color: Colors.red[400], size: 28),
                   const SizedBox(width: 12),
                   Text(
-                    'Purchase Failed',
+                    'Pembelian Gagal',
                     style: GoogleFonts.poppins(
                       color: Colors.red[400],
                       fontSize: 20,
@@ -194,7 +243,7 @@ class _StoreScreenState extends State<StoreScreen>
                   Icon(Icons.error_outline, color: Colors.red[400], size: 28),
                   const SizedBox(width: 12),
                   Text(
-                    'Purchase Failed',
+                    'Pembelian Gagal',
                     style: GoogleFonts.poppins(
                       color: Colors.red[400],
                       fontSize: 20,
@@ -204,7 +253,7 @@ class _StoreScreenState extends State<StoreScreen>
                 ],
               ),
               content: Text(
-                'Insufficient balance to purchase this power-up.',
+                'Saldo tidak cukup untuk membeli power-up ini.',
                 style: GoogleFonts.poppins(color: Colors.grey[300]),
               ),
               actions: [
@@ -236,7 +285,7 @@ class _StoreScreenState extends State<StoreScreen>
             if (mounted) {
               navigator.pop();
               setState(() {}); // Refresh UI
-              _showSuccessSnackBar('$itemName purchased successfully!');
+              _showSuccessSnackBar('$itemName berhasil dibeli!');
             }
           });
 
@@ -264,7 +313,7 @@ class _StoreScreenState extends State<StoreScreen>
               ],
             ),
             content: Text(
-              'Purchase completed successfully.',
+              'Pembelian berhasil.',
               style: GoogleFonts.poppins(color: Colors.grey[300]),
             ),
           );
@@ -309,12 +358,12 @@ class _StoreScreenState extends State<StoreScreen>
                   ),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
-                    padding: const EdgeInsets.all(16), 
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10), 
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(50),
@@ -325,12 +374,12 @@ class _StoreScreenState extends State<StoreScreen>
                             size: 28,
                           ),
                         ),
-                        const SizedBox(height: 12), 
+                        const SizedBox(height: 12),
                         Text(
                           item.name,
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontSize: 16, 
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -338,30 +387,36 @@ class _StoreScreenState extends State<StoreScreen>
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10, 
-                            vertical: 4, 
+                            horizontal: 10,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
-                          ),                          child: FutureBuilder<String>(
-                            future: _storeService.getLocalizedPrice(item.dolarPrice),
+                          ),
+                          child: FutureBuilder<String>(
+                            future: _storeService.getLocalizedPrice(
+                              item.dolarPrice,
+                            ),
                             builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
                                 return const SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 );
                               }
                               return Text(
-                                snapshot.data ?? 'Price unavailable',
+                                snapshot.data ?? 'Harga tidak tersedia',
                                 style: GoogleFonts.poppins(
                                   color: Colors.white,
-                                  fontSize: 14, 
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               );
@@ -374,7 +429,7 @@ class _StoreScreenState extends State<StoreScreen>
                 ),
               ),
             ),
-          )
+          ),
         );
       },
     );
@@ -458,36 +513,36 @@ class _StoreScreenState extends State<StoreScreen>
                           ),
                     borderRadius: BorderRadius.circular(20),
                     child: Padding(
-                      padding: const EdgeInsets.all(12), 
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10), 
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(50),
                             ),
-                            child: Icon(icon, color: Colors.white, size: 24), 
+                            child: Icon(icon, color: Colors.white, size: 24),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             item.name,
                             style: GoogleFonts.poppins(
                               color: Colors.white,
-                              fontSize: 13, 
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 6), 
+                          const SizedBox(height: 6),
                           if (!isMaxed)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6, 
-                                vertical: 3, 
+                                horizontal: 6,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
@@ -502,11 +557,11 @@ class _StoreScreenState extends State<StoreScreen>
                                 ),
                               ),
                             ),
-                          const SizedBox(height: 6), 
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6, 
-                              vertical: 3, 
+                              horizontal: 6,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: isMaxed
@@ -515,7 +570,9 @@ class _StoreScreenState extends State<StoreScreen>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              isMaxed ? 'MAXED OUT' : 'Owned: $owned/${item.maxQuantity}',
+                              isMaxed
+                                  ? 'MAXED OUT'
+                                  : 'Owned: $owned/${item.maxQuantity}',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 9,
@@ -530,7 +587,7 @@ class _StoreScreenState extends State<StoreScreen>
                 ),
               ),
             ),
-          )
+          ),
         );
       },
     );
@@ -595,7 +652,7 @@ class _StoreScreenState extends State<StoreScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Toko Game', // Translated
+                  'Toko Pak Buset', // Translated
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 24,
@@ -604,7 +661,7 @@ class _StoreScreenState extends State<StoreScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tingkatkan pengalaman bermainmu', // Translated
+                  'Tingkatkan pengalaman bermainmu',
                   style: GoogleFonts.poppins(
                     color: Colors.grey[400],
                     fontSize: 14,
@@ -764,13 +821,13 @@ class _StoreScreenState extends State<StoreScreen>
                     child: GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                            childAspectRatio: 0.85, // Reduced from 1.1 to give more vertical space
-                          ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio:
+                            0.85, // Reduced from 1.1 to give more vertical space
+                      ),
                       itemCount: _topUpItems.length,
                       itemBuilder: (context, index) =>
                           _buildTopUpCard(_topUpItems[index], index),
@@ -779,7 +836,7 @@ class _StoreScreenState extends State<StoreScreen>
 
                   const SizedBox(height: 32),
                   _buildSectionTitle(
-                    '⚡ Power-ups',
+                    '⚡ Power Up',
                     subtitle: 'Maksimal 5 item per jenis', // Translated
                   ),
                   const SizedBox(height: 16),
@@ -792,10 +849,12 @@ class _StoreScreenState extends State<StoreScreen>
                         crossAxisCount: 2,
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        childAspectRatio: 0.75, // Adjusted from 0.9 to give more vertical space
+                        childAspectRatio:
+                            0.75, // Adjusted from 0.9 to give more vertical space
                       ),
                       itemCount: _powerUpItems.length,
-                      itemBuilder: (context, index) => _buildPowerUpCard(_powerUpItems[index], index),
+                      itemBuilder: (context, index) =>
+                          _buildPowerUpCard(_powerUpItems[index], index),
                     ),
                   ),
 

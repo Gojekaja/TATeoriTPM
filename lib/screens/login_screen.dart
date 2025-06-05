@@ -52,31 +52,31 @@ class _LoginScreenState extends State<LoginScreen>
 
   String? _validateUsername(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Please enter your username';
+      return 'Silakan masukkan username Anda';
     }
     final trimmedValue = value.trim();
     if (trimmedValue.length < 3) {
-      return 'Username must be at least 3 characters';
+      return 'Username harus minimal 3 karakter';
     }
     if (trimmedValue.length > 10) {
-      return 'Username must be no more than 10 characters';
+      return 'Username maksimal 10 karakter';
     }
     final regex = RegExp(r'^[a-zA-Z0-9_]+$');
     if (!regex.hasMatch(trimmedValue)) {
-      return 'Username can only contain letters, numbers, and underscores';
+      return 'Username hanya boleh berisi huruf, angka, dan garis bawah';
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter your password';
+      return 'Silakan masukkan password Anda';
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return 'Password harus minimal 8 karakter';
     }
     if (value.length > 10) {
-      return 'Password must be no more than 10 characters';
+      return 'Password maksimal 10 karakter';
     }
     return null;
   }
@@ -93,14 +93,14 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      debugPrint('Starting login process...');
+      debugPrint('Memulai proses login...');
       final authService = AuthService();
       await authService.login(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
       );
 
-      debugPrint('Login successful');
+      debugPrint('Login berhasil');
 
       if (!mounted) return;
 
@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen>
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
-                  'Login successful!',
+                  'Login berhasil!',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -184,13 +184,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   String _getReadableErrorMessage(String error) {
     if (error.contains('Invalid credentials')) {
-      return 'Invalid username or password';
+      return 'Username atau password tidak valid';
     } else if (error.contains('Network')) {
-      return 'Network error. Please check your connection.';
+      return 'Kesalahan jaringan. Silakan periksa koneksi Anda.';
     } else if (error.contains('timeout')) {
-      return 'Request timed out. Please try again.';
+      return 'Permintaan timeout. Silakan coba lagi.';
     } else {
-      return 'Login failed. Please try again.';
+      return 'Login gagal. Silakan coba lagi.';
     }
   }
 
@@ -356,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Login to start your journey',
+                              'Login untuk memulai perjalanan Anda',
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 color: Colors.white60,
@@ -373,7 +373,7 @@ class _LoginScreenState extends State<LoginScreen>
                         _buildTextField(
                           controller: _usernameController,
                           label: 'Username',
-                          helperText: '3-10 characters only',
+                          helperText: 'karakter hanya 3-10',
                           maxLength: 10,
                           prefixIcon: Icons.person_outline,
                           textInputAction: TextInputAction.next,
@@ -384,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen>
                         _buildTextField(
                           controller: _passwordController,
                           label: 'Password',
-                          helperText: '8-10 characters',
+                          helperText: '8-10 karakter',
                           maxLength: 10,
                           prefixIcon: Icons.lock_outline,
                           obscureText: _obscurePassword,
@@ -550,7 +550,7 @@ class _LoginScreenState extends State<LoginScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Don\'t have an account? ',
+                              'Belum punya akun? ',
                               style: GoogleFonts.inter(
                                 color: Colors.white60,
                                 fontSize: 14,
@@ -576,7 +576,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                         // Footer
                         Text(
-                          'By logging in, you agree to our Terms of Service',
+                          'Dengan login, Anda setuju dengan Syarat dan Ketentuan Kami',
                           style: GoogleFonts.inter(
                             color: Colors.white.withOpacity(0.4),
                             fontSize: 12,

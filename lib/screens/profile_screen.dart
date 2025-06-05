@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Error loading profile: $e');
+        _showErrorSnackBar('Error memuat profil: $e');
       }
     } finally {
       if (mounted) {
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Failed to pick image: $e');
+        _showErrorSnackBar('Gagal memilih gambar: $e');
       }
     }
   }
@@ -191,9 +191,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   decoration: InputDecoration(
                     labelText: 'Username',
                     labelStyle: GoogleFonts.inter(color: Colors.blue[300]),
-                    hintText: 'Enter 3-10 characters',
+                    hintText: 'Masukkan 3-10 karakter',
                     hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
-                    helperText: 'Letters, numbers, and underscores only',
+                    helperText: 'Huruf, angka, dan garis bawah hanya',
                     helperStyle: GoogleFonts.inter(
                       color: Colors.grey[400],
                       fontSize: 12,
@@ -289,7 +289,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (!_isUsernameValid(username)) {
       _showErrorSnackBar(
-        'Username must be 3-10 characters (letters/numbers/_)',
+        'Username harus antara 3 dan 10 karakter (huruf/angka/_)',
       );
       return;
     }
@@ -308,12 +308,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           _isUpdating = false;
         });
         Navigator.of(dialogContext).pop();
-        _showSuccessSnackBar('Profile updated successfully!');
+        _showSuccessSnackBar('Profil berhasil diupdate!');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isUpdating = false);
-        _showErrorSnackBar('Failed to update profile: $e');
+        _showErrorSnackBar('Gagal mengupdate profil: $e');
       }
     }
   }
@@ -374,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               CircularProgressIndicator(color: Colors.blue[300]),
               const SizedBox(height: 16),
               Text(
-                'Loading profile...',
+                'Memuat profil...',
                 style: GoogleFonts.inter(color: Colors.white70),
               ),
             ],
@@ -393,14 +393,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
               const SizedBox(height: 16),
               Text(
-                'Failed to load profile',
+                'Gagal memuat profil',
                 style: GoogleFonts.inter(color: Colors.white, fontSize: 18),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _loadUserProfile,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: const Text('Coba Lagi'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[300],
                   shape: RoundedRectangleBorder(
@@ -504,23 +504,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
               ),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    color: Colors.blue[300],
-                    onPressed: _showEditProfileDialog,
-                    tooltip: 'Edit Profile',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.blue[300]!.withOpacity(0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
             SliverPersistentHeader(
               delegate: _SliverAppBarDelegate(
@@ -561,8 +544,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_user!.purchaseHistory.isEmpty) {
       return _buildEmptyState(
         icon: Icons.history_outlined,
-        title: 'No Purchase History',
-        subtitle: 'Your purchase history will appear here',
+        title: 'Tidak ada riwayat pembelian',
+        subtitle: 'Riwayat pembelian Anda akan muncul di sini',
       );
     }
 
@@ -659,34 +642,36 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPowerUpStats() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildPowerUpStatCard(
-            'Fifty-Fifty',
-            _user!.powerUpStats.fiftyFiftyUsed,
-            Icons.looks_two_outlined,
-            'Eliminates 2 wrong answers',
-            Colors.orange,
-          ),
-          const SizedBox(height: 16),
-          _buildPowerUpStatCard(
-            'Call Friend',
-            _user!.powerUpStats.callFriendUsed,
-            Icons.phone_outlined,
-            'Get help from a friend',
-            Colors.green,
-          ),
-          const SizedBox(height: 16),
-          _buildPowerUpStatCard(
-            'Ask Audience',
-            _user!.powerUpStats.audienceUsed,
-            Icons.people_outline,
-            'See audience poll results',
-            Colors.purple,
-          ),
-        ],
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildPowerUpStatCard(
+              '50 : 50',
+              _user!.powerUpStats.fiftyFiftyUsed,
+              Icons.looks_two_outlined,
+              'eliminasi 2 jawaban salah',
+              Colors.orange,
+            ),
+            const SizedBox(height: 16),
+            _buildPowerUpStatCard(
+              'Panggil Teman',
+              _user!.powerUpStats.callFriendUsed,
+              Icons.phone_outlined,
+              'telfon dan dapatkan bantuan dari temanmu',
+              Colors.green,
+            ),
+            const SizedBox(height: 16),
+            _buildPowerUpStatCard(
+              'Audience Voting',
+              _user!.powerUpStats.audienceUsed,
+              Icons.people_outline,
+              'lakukan voting dengan audience, dan dapatkan hasilnya',
+              Colors.purple,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -705,7 +690,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(15),
         child: Row(
           children: [
             Container(
@@ -741,7 +726,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 4,
+                      vertical: 1,
                     ),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.2),
@@ -766,212 +751,323 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSettings() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue[300]!.withOpacity(0.2)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline, color: Colors.blue[300]),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Update Username',
-                        style: GoogleFonts.inter(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.blue[300]!.withOpacity(0.2)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.photo_camera_outlined,
                           color: Colors.blue[300],
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Profile Picture',
+                          style: GoogleFonts.inter(
+                            color: Colors.blue[300],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          children: [
+                            _buildProfilePicture(
+                              _user!.profilePicPath,
+                              newPic: _newProfilePic,
+                              radius: 55,
+                            ),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[300],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_newProfilePic != null) ...[
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isUpdating
+                              ? null
+                              : () => _saveProfile(context),
+                          icon: _isUpdating
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined),
+                          label: Text(
+                            _isUpdating ? 'Saving...' : 'Save Picture',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[300],
+                            disabledBackgroundColor: Colors.grey[600],
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _usernameController,
-                    maxLength: 10,
-                    style: GoogleFonts.inter(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      labelStyle: GoogleFonts.inter(color: Colors.blue[300]),
-                      hintText: 'Enter 3-10 characters',
-                      hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
-                      helperText: 'Letters, numbers, and underscores only',
-                      helperStyle: GoogleFonts.inter(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Colors.blue[300]!.withOpacity(0.5),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Colors.blue[400]!,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      counterStyle: GoogleFonts.inter(color: Colors.white70),
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                        color: Colors.blue[300],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[900]?.withOpacity(0.3),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isUpdating
-                          ? null
-                          : _updateUsernameFromSettings,
-                      icon: _isUpdating
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: Text(
-                        _isUpdating ? 'Saving...' : 'Save Changes',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[300],
-                        disabledBackgroundColor: Colors.grey[600],
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16), // Add spacing
-          // Add Logout Button
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red[300]!.withOpacity(0.2)),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.blue[300]!.withOpacity(0.2)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline, color: Colors.blue[300]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Change Username',
+                          style: GoogleFonts.inter(
+                            color: Colors.blue[300],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _usernameController,
+                      maxLength: 10,
+                      style: GoogleFonts.inter(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        labelStyle: GoogleFonts.inter(color: Colors.blue[300]),
+                        hintText: 'Enter 3-10 characters',
+                        hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
+                        helperText: 'Letters, numbers, and underscores only',
+                        helperStyle: GoogleFonts.inter(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.blue[300]!.withOpacity(0.5),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.blue[400]!,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        counterStyle: GoogleFonts.inter(color: Colors.white70),
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: Colors.blue[300],
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[900]?.withOpacity(0.3),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isUpdating
+                            ? null
+                            : _updateUsernameFromSettings,
+                        icon: _isUpdating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(
+                          _isUpdating ? 'Saving...' : 'Save Changes',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[300],
+                          disabledBackgroundColor: Colors.grey[600],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Show confirmation dialog
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: const Color(0xFF1A1A1A),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: Row(
-                              children: [
-                                Icon(Icons.logout, color: Colors.red[300]),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Logout",
-                                  style: GoogleFonts.inter(
-                                    color: Colors.red[300],
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+            const SizedBox(height: 16), // Add spacing
+            // Add Logout Button
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red[300]!.withOpacity(0.2)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Show confirmation dialog
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: const Color(0xFF1A1A1A),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              title: Row(
+                                children: [
+                                  Icon(Icons.logout, color: Colors.red[300]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Logout",
+                                    style: GoogleFonts.inter(
+                                      color: Colors.red[300],
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: Text(
+                                "anda yakin ingin keluar?",
+                                style: GoogleFonts.inter(color: Colors.white),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text(
+                                    "Cancel",
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await _authService.signOut();
+                                    if (mounted) {
+                                      // Replace pushNamedAndRemoveUntil with go_router navigation
+                                      context.go('/login');
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red[300],
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Logout",
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            content: Text(
-                              "Are you sure you want to logout?",
-                              style: GoogleFonts.inter(color: Colors.white),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: Text(
-                                  "Cancel",
-                                  style: GoogleFonts.inter(color: Colors.white70),
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  await _authService.signOut();
-                                  if (mounted) {
-                                    // Replace pushNamedAndRemoveUntil with go_router navigation
-                                    context.go('/login');
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red[300],
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text(
-                                  "Logout",
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          );
+                        },
+                        icon: const Icon(Icons.logout),
+                        label: Text(
+                          'Logout',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.logout),
-                      label: Text(
-                        'Logout',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[300],
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[300],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -981,7 +1077,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (!_isUsernameValid(username)) {
       _showErrorSnackBar(
-        'Username must be 3-10 characters (letters/numbers/_)',
+        'Username harus antara 3 dan 10 karakter (huruf/angka/_)',
       );
       return;
     }
@@ -995,12 +1091,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           _user = _authService.currentUser;
           _isUpdating = false;
         });
-        _showSuccessSnackBar('Username updated successfully!');
+        _showSuccessSnackBar('Username berhasil diupdate!');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isUpdating = false);
-        _showErrorSnackBar('Failed to update username: $e');
+        _showErrorSnackBar('Gagal mengupdate username: $e');
       }
     }
   }

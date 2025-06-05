@@ -146,10 +146,10 @@ class AuthService {
       }
 
       _currentUser = user;
-      
+
       // Save login session as String, not Map
       await _db.settingsBox.put('lastLoggedInUser', {'username': username});
-      
+
       // Log login time
       await _db.gameStatsBox.put('${username}_login_history', {
         'lastLogin': DateTime.now().toIso8601String(),
@@ -249,19 +249,19 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-  if (_currentUser != null) {
-    // Log the last logout time
-    final username = _currentUser!.username;
-    await _db.gameStatsBox.put('${username}_login_history', {
-      'lastLogout': DateTime.now().toIso8601String(),
-      ..._db.gameStatsBox.get('${username}_login_history') ?? {},
-    });
+    if (_currentUser != null) {
+      // Log the last logout time
+      final username = _currentUser!.username;
+      await _db.gameStatsBox.put('${username}_login_history', {
+        'lastLogout': DateTime.now().toIso8601String(),
+        ..._db.gameStatsBox.get('${username}_login_history') ?? {},
+      });
 
-    // Clear the session
-    await _db.settingsBox.put('lastLoggedInUser', {'username': ''});
-    _currentUser = null;
+      // Clear the session
+      await _db.settingsBox.put('lastLoggedInUser', {'username': ''});
+      _currentUser = null;
+    }
   }
-}
 
   Future<void> deleteAccount() async {
     if (_currentUser == null) throw Exception('No user logged in');

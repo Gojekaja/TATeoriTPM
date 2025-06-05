@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/quiz_question.dart';
 import '../models/user.dart';
@@ -29,7 +30,7 @@ class GameService {
   }
 
   void _initializeGemini() {
-    const apiKey = 'AIzaSyD_GaXj6lpJlwxItrubZncWxGgJDKq9ryg';
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _geminiModel = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
   }
 
@@ -151,7 +152,8 @@ class GameService {
       ),
       'totalWinnings':
           (((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
-                  0) as num)
+                      0)
+                  as num)
               .toDouble()) +
           (checkpointLevels.contains(_currentLevel - 1) ||
                   _currentLevel - 1 == 12

@@ -37,14 +37,13 @@ class User extends HiveObject {
     this.profilePicPath = 'assets/default_avatar.png',
     PowerUpStats? powerUpStats,
     String? hashedPassword,
-  }) : 
-    this.hashedPassword = hashedPassword ?? (password.isNotEmpty ? PasswordHasher.hashPassword(password) : ''),
-    this.purchaseHistory = purchaseHistory ?? [],
-    this.powerUpStats = powerUpStats ?? PowerUpStats(
-      fiftyFiftyUsed: 0,
-      callFriendUsed: 0,
-      audienceUsed: 0
-    );
+  }) : this.hashedPassword =
+           hashedPassword ??
+           (password.isNotEmpty ? PasswordHasher.hashPassword(password) : ''),
+       this.purchaseHistory = purchaseHistory ?? [],
+       this.powerUpStats =
+           powerUpStats ??
+           PowerUpStats(fiftyFiftyUsed: 0, callFriendUsed: 0, audienceUsed: 0);
 
   bool verifyPassword(String password) {
     return PasswordHasher.verifyPassword(password, hashedPassword);
