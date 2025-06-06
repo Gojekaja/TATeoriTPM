@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vibration/vibration.dart';
 import '../models/quiz_question.dart';
 import '../services/game_service.dart';
 import '../utils/currency_converter.dart';
 import '../widgets/confetti_overlay.dart';
+import 'dart:async';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -24,6 +26,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool _isCelebrating = false;
   String? _selectedAnswer;
   bool _canAnswer = true;
+
+  // Timer for double prize event
+  Timer? _shakeTimer;
+  int _shakeCountdown = 10;
 
   // Enhanced animations
   late AnimationController _questionAnimController;
@@ -120,30 +126,34 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         return;
       }
 
-      // Handle correct answer
-      await _gameService.handleCorrectAnswer();
+      // Check if double prize event is active
+      if (_gameService.isDoublePrizeEventActive) {
+        _showDoublePrizeEventDialog(
+          _gameService.currentDoublePrizeAmount,
+          _gameService.currentLevel - 1,
+        );
+      } else {
+        setState(() {
+          _message = "Benar! Pindah ke level berikutnya!";
+          _isCelebrating = _gameService.currentLevel == 12;
+        });
 
-      setState(() {
-        _message = "Benar! Pindah ke level berikutnya!";
-        // Only show confetti when completing level 12
-        _isCelebrating = _gameService.currentLevel == 12;
-      });
+        if (result.isGameComplete) {
+          _showVictoryDialog(result.earnedAmount);
+          return;
+        }
 
-      if (result.isGameComplete) {
-        _showVictoryDialog(result.earnedAmount);
-        return;
+        if (_gameService.isAtCheckpoint) {
+          _showCheckpointDialog(
+            _gameService.calculateReward(_gameService.currentLevel - 1),
+          );
+          return;
+        }
+
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        _loadNextQuestion();
       }
-
-      // Check if player reached a checkpoint
-      if (_gameService.isAtCheckpoint) {
-        _showCheckpointDialog(result.earnedAmount);
-        return;
-      }
-
-      // Load next question after delay
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
-      _loadNextQuestion();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -501,21 +511,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: TextButton(
                   onPressed: () async {
                     Navigator.of(ctx).pop();
-                    // Save the current amount to user's balance
-                    await _gameService.takeMoney(amount);
-                    if (!mounted) return;
-                    // Show success message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Mahal king 🔥🔥! ${CurrencyConverter.formatGameDolar(amount)} sudah ditambahkan ke saldo Anda',
-                          style: GoogleFonts.poppins(),
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
+                    // Try to take money and check if double prize event triggers
+                    final hasDoublePrizeEvent = await _gameService.takeMoney(
+                      amount,
                     );
-                    // Restart the game
-                    _startGame();
+
+                    if (hasDoublePrizeEvent && mounted) {
+                      // Show double prize event dialog
+                      _showDoublePrizeEventDialog(
+                        _gameService.currentDoublePrizeAmount,
+                        _gameService.currentLevel - 1,
+                      );
+                    } else if (mounted) {
+                      // Show success message for normal prize
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Mahal king 🔥🔥! ${CurrencyConverter.formatGameDolar(amount)} sudah ditambahkan ke saldo Anda',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      // Restart the game
+                      _startGame();
+                    }
                   },
                   style: TextButton.styleFrom(
                     backgroundColor: Colors.green[600],
@@ -559,6 +579,518 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _showDoublePrizeEventDialog(double doubleAmount, int levelWon) {
+    final countdownNotifier = ValueNotifier<int>(10);
+    Timer? dialogTimer;
+
+    // Start with an initial intense burst
+    Vibration.vibrate(duration: 1000, amplitude: 255).then((_) {
+      // Then start continuous vibration
+      Vibration.vibrate(
+        pattern: [0, 2000], // Vibrate continuously for 2 seconds
+        amplitude: 255, // Maximum amplitude
+        repeat: -1, // Repeat indefinitely
+      );
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        // Start the timer when dialog is built
+        dialogTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+          if (countdownNotifier.value > 0) {
+            countdownNotifier.value--;
+
+            if (_gameService.shakeDetected) {
+              timer.cancel();
+              if (ctx.mounted) {
+                await Vibration.cancel(); // Stop vibration
+                Navigator.of(ctx).pop();
+                _claimDoublePrizeConfirmed(ctx, doubleAmount);
+              }
+            }
+          } else {
+            timer.cancel();
+            if (ctx.mounted) {
+              await Vibration.cancel(); // Stop vibration
+              Navigator.of(ctx).pop();
+              if (_gameService.shakeDetected) {
+                _claimDoublePrizeConfirmed(ctx, doubleAmount);
+              } else {
+                _skipDoublePrizeEventConfirmed(ctx);
+              }
+            }
+          }
+        });
+
+        return WillPopScope(
+          onWillPop: () async {
+            dialogTimer?.cancel();
+            countdownNotifier.dispose();
+            await Vibration.cancel(); // Stop vibration
+            return true;
+          },
+          child: AlertDialog(
+            backgroundColor: Colors.grey[900],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 500),
+              tween: Tween<double>(begin: 0.8, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.scale(scale: value, child: child);
+              },
+              child: Text(
+                'DOUBLE PRIZE EVENT!',
+                style: GoogleFonts.poppins(
+                  color: Colors.amber,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 800),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.amber.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _gameService.shakeDetected
+                              ? Icons.check_circle_outline
+                              : Icons.phone_android_rounded,
+                          size: 64,
+                          color: _gameService.shakeDetected
+                              ? Colors.green[400]
+                              : Colors.amber,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                SlideTransition(
+                  position:
+                      Tween<Offset>(
+                        begin: const Offset(0, 0.5),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: _questionAnimController,
+                          curve: Curves.easeOutBack,
+                        ),
+                      ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Selamat! Anda memenangkan level $levelWon!',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.amber.withOpacity(0.3),
+                              Colors.orange.withOpacity(0.3),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: Colors.amber.withOpacity(0.5),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'GOYANGKAN PONSEL SEKARANG!',
+                              style: GoogleFonts.poppins(
+                                color: Colors.amber,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'untuk mendapatkan',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey[400],
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TweenAnimationBuilder<double>(
+                              duration: const Duration(milliseconds: 1000),
+                              tween: Tween<double>(begin: 0.9, end: 1.1),
+                              builder: (context, value, child) {
+                                return Transform.scale(
+                                  scale: value,
+                                  child: Text(
+                                    CurrencyConverter.formatGameDolar(
+                                      doubleAmount,
+                                    ),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ValueListenableBuilder<int>(
+                        valueListenable: countdownNotifier,
+                        builder: (context, countdown, _) {
+                          return Row(
+                            children: [
+                              Icon(
+                                Icons.timer_outlined,
+                                color: countdown <= 3
+                                    ? Colors.red[400]
+                                    : Colors.grey[400],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$countdown detik',
+                                style: GoogleFonts.poppins(
+                                  color: countdown <= 3
+                                      ? Colors.red[400]
+                                      : Colors.grey[400],
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                if (_gameService.shakeDetected)
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 500),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[900]?.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green[400]!.withOpacity(0.5),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  color: Colors.green[400],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Goncangan Terdeteksi!',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.green[400],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      dialogTimer?.cancel();
+                      Navigator.of(ctx).pop();
+                      _skipDoublePrizeEventConfirmed(ctx);
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.grey[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      "Lewati",
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (_gameService.shakeDetected)
+                    TextButton(
+                      onPressed: () {
+                        dialogTimer?.cancel();
+                        Navigator.of(ctx).pop();
+                        _claimDoublePrizeConfirmed(ctx, doubleAmount);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.green[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 20,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Klaim!",
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) async {
+      // Cleanup when dialog is closed
+      dialogTimer?.cancel();
+      countdownNotifier.dispose();
+      await Vibration.cancel(); // Stop vibration
+    });
+  }
+
+  Future<void> _claimDoublePrizeConfirmed(
+    BuildContext ctx,
+    double doubleAmount,
+  ) async {
+    bool claimed = await _gameService.claimDoublePrize();
+    if (claimed && mounted) {
+      // Show success dialog with confetti
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogCtx) => Stack(
+          children: [
+            const ConfettiOverlay(),
+            AlertDialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 500),
+                tween: Tween<double>(begin: 0.8, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Text(
+                      'SELAMAT! 🎉',
+                      style: GoogleFonts.poppins(
+                        color: Colors.amber,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                },
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 16),
+                  Icon(
+                    Icons.emoji_events_rounded,
+                    size: 80,
+                    color: Colors.amber,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Anda berhasil mendapatkan hadiah ganda!',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.amber.withOpacity(0.3),
+                          Colors.orange.withOpacity(0.3),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Total Hadiah:',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[400],
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 500),
+                          tween: Tween<double>(begin: 0.9, end: 1.1),
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: Text(
+                                CurrencyConverter.formatGameDolar(doubleAmount),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () {
+                      if (dialogCtx.mounted) {
+                        Navigator.of(dialogCtx).pop();
+                      }
+                      if (mounted) {
+                        _startGame(); // Restart the game
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      "Main Lagi",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else if (mounted) {
+      _showErrorDialog('Gagal mengklaim hadiah ganda.');
+      _startGame();
+    }
+  }
+
+  Future<void> _skipDoublePrizeEventConfirmed(BuildContext ctx) async {
+    await _gameService.skipDoublePrizeEvent();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Anda melewatkan hadiah ganda. Hadiah reguler telah ditambahkan.',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _startGame();
+    }
+  }
+
+  void _continueGameFlow() {
+    if (_gameService.currentLevel > 12) {
+      _showVictoryDialog(_gameService.calculateReward(12));
+    } else if (_gameService.isAtCheckpoint) {
+      _showCheckpointDialog(
+        _gameService.calculateReward(_gameService.currentLevel - 1),
+      );
+    } else {
+      _loadNextQuestion();
+    }
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -580,6 +1112,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _questionAnimController.dispose();
     _optionsAnimController.dispose();
     _pulseAnimController.dispose();
+    _shakeTimer?.cancel();
     super.dispose();
   }
 

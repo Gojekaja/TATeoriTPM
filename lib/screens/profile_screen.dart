@@ -120,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _showEditProfileDialog() {
+  /*void _showEditProfileDialog() {
     _newProfilePic = null;
     _usernameController.text = _user?.username ?? '';
 
@@ -282,7 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
     );
-  }
+  }*/
 
   Future<void> _saveProfile(BuildContext dialogContext) async {
     final username = _usernameController.text.trim();

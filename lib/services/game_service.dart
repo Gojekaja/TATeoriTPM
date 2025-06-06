@@ -2,10 +2,13 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:vibration/vibration.dart';
 import '../models/quiz_question.dart';
 import '../models/user.dart';
 import 'auth_service.dart';
 import 'database_service.dart';
+import 'dart:async';
 
 class GameService {
   static final GameService _instance = GameService._internal();
@@ -21,17 +24,41 @@ class GameService {
   bool _isGameActive = false;
   static const List<int> checkpointLevels = [3, 6, 9];
 
+  // Double Prize Event state
+  bool _isDoublePrizeEventActive = false;
+  double _currentDoublePrizeAmount = 0.0;
+  bool _shakeDetected = false;
+  double _lastShakeMagnitude = 0.0;
+  bool _canVibrate = false;
+  Timer? _continuousVibrationTimer;
+
+  // Shake detection settings
+  static const double _shakeThreshold = 25.0;
+  static const int _shakeCoolDownMs = 1000;
+  DateTime _lastShakeTime = DateTime.now();
+  DateTime _lastVibrateTime = DateTime.now();
+
   factory GameService() {
     return _instance;
   }
 
   GameService._internal() {
     _initializeGemini();
+    _initAccelerometerListener();
+    _initVibration();
   }
 
   void _initializeGemini() {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     _geminiModel = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+  }
+
+  Future<void> _initVibration() async {
+    _canVibrate = await Vibration.hasVibrator() ?? false;
+    if (_canVibrate) {
+      bool? hasAmplitudeControl = await Vibration.hasAmplitudeControl();
+      debugPrint('Device has amplitude control: $hasAmplitudeControl');
+    }
   }
 
   // Game state getters
@@ -41,26 +68,316 @@ class GameService {
   bool get isAtCheckpoint => checkpointLevels.contains(_currentLevel);
   AuthService get authService => _authService;
 
-  // Take money at checkpoint
-  Future<void> takeMoney(double amount) async {
+  // Double Prize Event getters
+  bool get isDoublePrizeEventActive => _isDoublePrizeEventActive;
+  double get currentDoublePrizeAmount => _currentDoublePrizeAmount;
+  bool get shakeDetected => _shakeDetected;
+
+  void _initAccelerometerListener() {
+    accelerometerEventStream(
+      samplingPeriod: const Duration(milliseconds: 100),
+    ).listen(
+      (AccelerometerEvent event) {
+        final double magnitude = sqrt(
+          event.x * event.x + event.y * event.y + event.z * event.z,
+        );
+
+        if (_isDoublePrizeEventActive &&
+            DateTime.now().difference(_lastShakeTime).inMilliseconds >
+                _shakeCoolDownMs) {
+          if (magnitude > _shakeThreshold) {
+            _shakeDetected = true;
+            _lastShakeMagnitude = magnitude;
+            _lastShakeTime = DateTime.now();
+            _vibrateOnShakeDetected();
+            debugPrint('Guncangan terdeteksi! Magnitude: $magnitude');
+          } else if (!_shakeDetected &&
+              magnitude >
+                  _shakeThreshold *
+                      0.7 && // Threshold for "almost there" feedback
+              DateTime.now().difference(_lastVibrateTime).inMilliseconds >
+                  500) {
+            // Vibration cooldown
+            _vibrateForProgress();
+          }
+        }
+      },
+      onError: (e) {
+        debugPrint('Error mengakses accelerometer: $e');
+      },
+      cancelOnError: true,
+    );
+  }
+
+  // Vibration feedback methods
+  Future<void> _vibrateOnShakeDetected() async {
+    if (!_canVibrate) return;
+
+    // Super intense success pattern with multiple vibrations
+    for (int i = 0; i < 2; i++) {
+      await Vibration.vibrate(
+        pattern: [0, 50, 50, 50, 50, 50], // Vibration pattern
+        intensities: [255, 255, 255, 255, 255, 255], // Full intensity
+        amplitude: 255, // Maximum amplitude
+        repeat: 0, // Repeat only once
+      );
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    // Final strong vibration
+    await Vibration.vibrate(
+      pattern: [0, 500], // Start immediately, vibrate for 500ms
+      intensities: [255], // Maximum intensity
+      repeat: 0, // Start repeating from index 0
+    );
+  }
+
+  Future<void> _vibrateForProgress() async {
+    if (!_canVibrate) return;
+    _lastVibrateTime = DateTime.now();
+
+    // Triple burst for progress
+    await Vibration.vibrate(
+      pattern: [0, 300, 300, 300], // Start immediately, vibrate for 300ms each
+      intensities: [255, 255, 255], // Full intensity
+      repeat: 0, // Start repeating from index 0
+    );
+  }
+
+  // Vibrate when double prize event starts
+  Future<void> vibrateForEventStart() async {
+    if (!_canVibrate) return;
+
+    // Strong initial pattern
+    await Vibration.vibrate(
+      pattern: [0, 500, 100, 500, 100, 500], // Alternating vibration and pause
+      intensities: [255, 0, 255, 0, 255], // Full intensity when vibrating
+      amplitude: 255, // Maximum amplitude
+    );
+  }
+
+  // Start new game
+  Future<void> startGame() async {
+    _currentLevel = 1;
+    _usedPowerUps.clear();
+    _isGameActive = true;
+    _isDoublePrizeEventActive = false;
+    _currentDoublePrizeAmount = 0.0;
+    _shakeDetected = false;
+  }
+
+  // Public methods for vibration control
+  void stopContinuousVibration() {
+    if (!_canVibrate) return;
+    Vibration.cancel();
+  }
+
+  void startContinuousVibration() async {
+    if (!_canVibrate) return;
+
+    // Initial intense burst
+    await Vibration.vibrate(
+      pattern: [0, 300], // Start immediately, vibrate for 300ms
+      intensities: [255], // Maximum intensity
+      repeat: 0, // Start repeating from index 0
+    );
+  }
+
+  // Handle correct answer with continuous vibration
+  Future<void> handleCorrectAnswer() async {
+    final user = _authService.currentUser;
+    if (user == null) throw Exception('User tidak terdaftar');
+
+    _usedPowerUps.clear();
+
+    if (checkpointLevels.contains(_currentLevel) || _currentLevel == 12) {
+      final reward = calculateReward(_currentLevel);
+
+      if (_shouldTriggerDoublePrizeEvent(_currentLevel)) {
+        _isDoublePrizeEventActive = true;
+        _currentDoublePrizeAmount = reward * 2;
+        _shakeDetected = false;
+
+        // Start continuous vibration
+        startContinuousVibration();
+
+        debugPrint(
+          'Event Ganda Terdeteksi untuk Level $_currentLevel! Jumlah: $_currentDoublePrizeAmount',
+        );
+      } else {
+        user.dolarBalance += reward;
+        user.purchaseHistory.add(
+          PurchaseHistory(
+            type: 'Game Win',
+            amount: reward,
+            date: DateTime.now(),
+            item: 'Kamu menang level $_currentLevel !',
+            price: '${reward.toStringAsFixed(0)} Dolar',
+          ),
+        );
+        debugPrint('Hadiah normal untuk Level $_currentLevel. Jumlah: $reward');
+      }
+    }
+
+    _currentLevel++;
+
+    await _db.gameStatsBox.put('${user.username}_stats', {
+      'highestLevel': max(
+        _currentLevel - 1,
+        (_db.gameStatsBox.get('${user.username}_stats')?['highestLevel'] ?? 0)
+            as int,
+      ),
+      'totalWinnings':
+          ((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
+                      0)
+                  as num)
+              .toDouble(),
+      'lastPlayed': DateTime.now().toIso8601String(),
+    });
+
+    await user.save();
+  }
+
+  // Claim double prize with cleanup
+  Future<bool> claimDoublePrize() async {
+    if (!_isDoublePrizeEventActive || !_shakeDetected) {
+      debugPrint(
+        'Tidak dapat mengklaim hadiah ganda: Event tidak aktif atau guncangan tidak terdeteksi.',
+      );
+      return false;
+    }
+
     final user = _authService.currentUser;
     if (user == null) throw Exception('User not logged in');
 
-    // Add the amount to user's balance
-    user.dolarBalance += amount;
+    user.dolarBalance += _currentDoublePrizeAmount;
+    user.purchaseHistory.add(
+      PurchaseHistory(
+        type: 'Game Win (Double Prize)',
+        amount: _currentDoublePrizeAmount,
+        date: DateTime.now(),
+        item: 'Double Prize for Level ${_currentLevel - 1}!',
+        price: '${_currentDoublePrizeAmount.toStringAsFixed(0)} Dolar',
+      ),
+    );
 
-    // Add to purchase history with new format
+    await _db.gameStatsBox.put('${user.username}_stats', {
+      'highestLevel': max(
+        _currentLevel - 1,
+        (_db.gameStatsBox.get('${user.username}_stats')?['highestLevel'] ?? 0)
+            as int,
+      ),
+      'totalWinnings':
+          ((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
+                      0)
+                  as num)
+              .toDouble() +
+          _currentDoublePrizeAmount,
+      'lastPlayed': DateTime.now().toIso8601String(),
+    });
+
+    _isDoublePrizeEventActive = false;
+    _currentDoublePrizeAmount = 0.0;
+    _shakeDetected = false;
+    _lastShakeMagnitude = 0.0;
+
+    // Stop continuous vibration
+    stopContinuousVibration();
+
+    await user.save();
+    debugPrint('Hadiah Ganda Terklaim! Jumlah: ${user.dolarBalance}');
+    return true;
+  }
+
+  // Skip double prize event with cleanup
+  Future<void> skipDoublePrizeEvent() async {
+    if (!_isDoublePrizeEventActive) {
+      debugPrint('Tidak ada event ganda untuk dilewatkan.');
+      return;
+    }
+
+    final user = _authService.currentUser;
+    if (user == null) throw Exception('User tidak terdaftar');
+
+    final regularPrizeAmount = _currentDoublePrizeAmount / 2;
+    user.dolarBalance += regularPrizeAmount;
+    user.purchaseHistory.add(
+      PurchaseHistory(
+        type: 'Game Win',
+        amount: regularPrizeAmount,
+        date: DateTime.now(),
+        item: 'Regular Prize for Level ${_currentLevel - 1}',
+        price: '${regularPrizeAmount.toStringAsFixed(0)} Dolar',
+      ),
+    );
+
+    await _db.gameStatsBox.put('${user.username}_stats', {
+      'highestLevel': max(
+        _currentLevel - 1,
+        (_db.gameStatsBox.get('${user.username}_stats')?['highestLevel'] ?? 0)
+            as int,
+      ),
+      'totalWinnings':
+          ((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
+                      0)
+                  as num)
+              .toDouble() +
+          regularPrizeAmount,
+      'lastPlayed': DateTime.now().toIso8601String(),
+    });
+
+    _isDoublePrizeEventActive = false;
+    _currentDoublePrizeAmount = 0.0;
+    _shakeDetected = false;
+    _lastShakeMagnitude = 0.0;
+
+    // Stop continuous vibration
+    stopContinuousVibration();
+
+    await user.save();
+    debugPrint(
+      'Event Ganda dilewatkan. Hadiah normal ditambahkan: $regularPrizeAmount',
+    );
+  }
+
+  // Take money at checkpoint
+  Future<bool> takeMoney(double amount) async {
+    final user = _authService.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    // Check for double prize opportunity when taking money
+    if (_shouldTriggerDoublePrizeEvent(_currentLevel)) {
+      _isDoublePrizeEventActive = true;
+      _currentDoublePrizeAmount = amount * 2;
+      _shakeDetected = false;
+      return true; // Indicate that double prize event is triggered
+    }
+
+    // If no double prize event, proceed with normal money collection
+    await _finalizeMoneyCollection(amount);
+    return false; // Indicate no double prize event
+  }
+
+  // Helper method to finalize money collection
+  Future<void> _finalizeMoneyCollection(double amount) async {
+    final user = _authService.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    _isDoublePrizeEventActive = false;
+    _currentDoublePrizeAmount = 0.0;
+    _shakeDetected = false;
+    _lastShakeMagnitude = 0.0;
+
+    user.dolarBalance += amount;
     user.purchaseHistory.add(
       PurchaseHistory(
         type: 'Game Win',
         amount: amount,
         date: DateTime.now(),
-        item: 'You win level $_currentLevel !',
+        item: 'Kamu menang level $_currentLevel !',
         price: '${amount.toStringAsFixed(0)} Dolar',
       ),
     );
 
-    // Save game stats
     await _db.gameStatsBox.put('${user.username}_stats', {
       'highestLevel': max(
         _currentLevel,
@@ -69,14 +386,40 @@ class GameService {
       ),
       'totalWinnings':
           ((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
-                  0)
-              as double) +
+                      0)
+                  as num)
+              .toDouble() +
           amount,
       'lastPlayed': DateTime.now().toIso8601String(),
     });
 
-    // Reset game state
     _isGameActive = false;
+    await user.save();
+  }
+
+  // Determine if double prize event should trigger
+  bool _shouldTriggerDoublePrizeEvent(int level) {
+    if (level == 3) {
+      return _random.nextInt(100) < 70; // 70% chance at first checkpoint
+    } else if (level == 6) {
+      return _random.nextInt(100) < 50; // 50% chance at second checkpoint
+    } else if (level == 9) {
+      return _random.nextInt(100) < 30; // 30% chance at third checkpoint
+    } else if (level == 12) {
+      return _random.nextInt(100) < 20; // 20% chance at final level
+    }
+    return false;
+  }
+
+  // Handle game over
+  Future<void> handleGameOver({bool saveCheckpoint = false}) async {
+    final user = _authService.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    _isGameActive = false;
+    _isDoublePrizeEventActive = false;
+    _currentDoublePrizeAmount = 0.0;
+    _shakeDetected = false;
     await user.save();
   }
 
@@ -110,70 +453,6 @@ class GameService {
       default:
         return 0;
     }
-  }
-
-  // Start new game
-  Future<void> startGame() async {
-    _currentLevel = 1;
-    _usedPowerUps.clear();
-    _isGameActive = true;
-  }
-
-  // Handle correct answer
-  Future<void> handleCorrectAnswer() async {
-    final user = _authService.currentUser;
-    if (user == null) throw Exception('User not logged in');
-
-    // Only add reward at checkpoints or final level
-    if (checkpointLevels.contains(_currentLevel - 1) ||
-        _currentLevel - 1 == 12) {
-      // Calculate reward for the previous level
-      final reward = calculateReward(_currentLevel - 1);
-      user.dolarBalance += reward;
-
-      // Add to purchase history with new format
-      user.purchaseHistory.add(
-        PurchaseHistory(
-          type: 'Game Win',
-          amount: reward,
-          date: DateTime.now(),
-          item: 'You win level ${_currentLevel - 1} !',
-          price: '${reward.toStringAsFixed(0)} Dolar',
-        ),
-      );
-    }
-
-    // Save game stats with proper type conversion
-    await _db.gameStatsBox.put('${user.username}_stats', {
-      'highestLevel': max(
-        _currentLevel,
-        (_db.gameStatsBox.get('${user.username}_stats')?['highestLevel'] ?? 0)
-            as int,
-      ),
-      'totalWinnings':
-          (((_db.gameStatsBox.get('${user.username}_stats')?['totalWinnings'] ??
-                      0)
-                  as num)
-              .toDouble()) +
-          (checkpointLevels.contains(_currentLevel - 1) ||
-                  _currentLevel - 1 == 12
-              ? calculateReward(_currentLevel - 1)
-              : 0),
-      'lastPlayed': DateTime.now().toIso8601String(),
-    });
-
-    _usedPowerUps.clear();
-
-    await user.save();
-  }
-
-  // Handle game over
-  Future<void> handleGameOver({bool saveCheckpoint = false}) async {
-    final user = _authService.currentUser;
-    if (user == null) throw Exception('User not logged in');
-
-    _isGameActive = false;
-    await user.save();
   }
 
   // Power-up: 50:50
@@ -440,6 +719,11 @@ class GameService {
 
     // Return prize for current level - 1 (since _currentLevel starts at 1)
     return _currentLevel <= 1 ? 0 : prizes[_currentLevel - 2].toDouble();
+  }
+
+  @override
+  void dispose() {
+    stopContinuousVibration();
   }
 }
 
