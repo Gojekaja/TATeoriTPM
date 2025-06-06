@@ -1,30 +1,55 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:millionaire_game/main.dart';
+import 'package:millionaire_game/utils/password_hasher.dart';
+import 'package:millionaire_game/main.dart'; // Pastikan ini ada
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  group('PasswordHasher', () {
+    test('password should be hashed correctly', () {
+      const String password = 'mySecurePassword123';
+      final String hashedPassword = PasswordHasher.hashPassword(password);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      // Menampilkan hasil hashing di konsol test
+      debugPrint('Original Password: $password');
+      debugPrint('Hashed Password: $hashedPassword');
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      // Verifikasi yang sudah ada
+      expect(hashedPassword, isNot(equals(password)));
+      expect(hashedPassword.length, equals(64));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      final String hashedPasswordAgain = PasswordHasher.hashPassword(password);
+      expect(hashedPassword, equals(hashedPasswordAgain));
+
+      const String anotherPassword = 'anotherSecurePassword456';
+      final String anotherHashedPassword = PasswordHasher.hashPassword(
+        anotherPassword,
+      );
+      expect(hashedPassword, isNot(equals(anotherHashedPassword)));
+    });
+
+    test('password verification should work correctly', () {
+      const String password = 'mySecurePassword123';
+      final String hashedPassword = PasswordHasher.hashPassword(password);
+
+      // Verifikasi bahwa password asli yang benar dapat diverifikasi
+      expect(PasswordHasher.verifyPassword(password, hashedPassword), isTrue);
+
+      // Verifikasi bahwa password yang salah tidak dapat diverifikasi
+      const String wrongPassword = 'wrongPassword';
+      expect(
+        PasswordHasher.verifyPassword(wrongPassword, hashedPassword),
+        isFalse,
+      );
+
+      // Verifikasi penanganan kasus jika hashed password kosong
+      expect(PasswordHasher.verifyPassword(password, ''), isFalse);
+      // Verifikasi penanganan kasus jika input password kosong
+      expect(PasswordHasher.verifyPassword('', hashedPassword), isFalse);
+    });
+
+    test('empty password should throw an exception when hashing', () {
+      // Menguji kondisi di mana password kosong seharusnya memicu exception saat hashing
+      expect(() => PasswordHasher.hashPassword(''), throwsA(isA<Exception>()));
+    });
   });
 }
