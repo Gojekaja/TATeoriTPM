@@ -29,7 +29,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Timer for double prize event
   Timer? _shakeTimer;
-  int _shakeCountdown = 10;
 
   // Enhanced animations
   late AnimationController _questionAnimController;
@@ -583,20 +582,28 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final countdownNotifier = ValueNotifier<int>(10);
     Timer? dialogTimer;
 
-    // Start with an initial intense burst
-    Vibration.vibrate(duration: 1000, amplitude: 255).then((_) {
-      // Then start continuous vibration
-      Vibration.vibrate(
-        pattern: [0, 2000], // Vibrate continuously for 2 seconds
-        amplitude: 255, // Maximum amplitude
-        repeat: -1, // Repeat indefinitely
-      );
+    // Debug check for vibration capability
+    Vibration.hasVibrator().then((hasVib) async {
+      debugPrint('Device has vibrator: $hasVib');
+      if (hasVib) {
+        try {
+          // Try a simple continuous vibration
+          await Vibration.vibrate(
+            duration: 10000, // 10 seconds
+            amplitude: 255,
+          );
+          debugPrint('Vibration started');
+        } catch (e) {
+          debugPrint('Error during vibration: $e');
+        }
+      }
     });
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
+        debugPrint('event hadiah ganda dialog ditampilkan');
         // Start the timer when dialog is built
         dialogTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
           if (countdownNotifier.value > 0) {
@@ -1266,9 +1273,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final availableWidth = constraints.maxWidth;
-                      final spacing =
-                          (availableWidth - (24 * 12)) /
-                          11; // Calculate dynamic spacing
 
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
