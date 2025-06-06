@@ -36,7 +36,14 @@ class StoreItem extends HiveObject {
   // Predefined store items
   static List<StoreItem> getDefaultItems() {
     return [
-      // Top-up items
+      // Top-up items with varied amounts
+      StoreItem(
+        id: 'top_up_starter',
+        name: '500 Dolar',
+        dolarPrice: 500, // 15,000,000 IDR
+        type: 'top_up',
+        maxQuantity: 5,
+      ),
       StoreItem(
         id: 'top_up_small',
         name: '1,000 Dolar',
@@ -46,17 +53,38 @@ class StoreItem extends HiveObject {
       ),
       StoreItem(
         id: 'top_up_medium',
+        name: '2,500 Dolar',
+        dolarPrice: 2500, // 75,000,000 IDR
+        type: 'top_up',
+        maxQuantity: 5,
+      ),
+      StoreItem(
+        id: 'top_up_large',
         name: '5,000 Dolar',
         dolarPrice: 5000, // 150,000,000 IDR
         type: 'top_up',
         maxQuantity: 5,
       ),
       StoreItem(
-        id: 'top_up_large',
+        id: 'top_up_xl',
         name: '10,000 Dolar',
         dolarPrice: 10000, // 300,000,000 IDR
         type: 'top_up',
         maxQuantity: 5,
+      ),
+      StoreItem(
+        id: 'top_up_premium',
+        name: '25,000 Dolar',
+        dolarPrice: 25000, // 750,000,000 IDR
+        type: 'top_up',
+        maxQuantity: 3,
+      ),
+      StoreItem(
+        id: 'top_up_ultimate',
+        name: '50,000 Dolar',
+        dolarPrice: 50000, // 1,500,000,000 IDR
+        type: 'top_up',
+        maxQuantity: 2,
       ),
 
       // Power-up items with updated prices
@@ -66,7 +94,7 @@ class StoreItem extends HiveObject {
         dolarPrice: 5000, // 150,000,000 IDR
         type: 'power_up',
         iconName: 'percent',
-        maxQuantity: 30,
+        maxQuantity: 10,
       ),
       StoreItem(
         id: 'power_up_call_friend',
@@ -74,7 +102,7 @@ class StoreItem extends HiveObject {
         dolarPrice: 10000, // 300,000,000 IDR
         type: 'power_up',
         iconName: 'phone',
-        maxQuantity: 30,
+        maxQuantity: 10,
       ),
       StoreItem(
         id: 'power_up_audience',
@@ -82,7 +110,7 @@ class StoreItem extends HiveObject {
         dolarPrice: 15000, // 450,000,000 IDR
         type: 'power_up',
         iconName: 'people',
-        maxQuantity: 30,
+        maxQuantity: 10,
       ),
     ];
   }

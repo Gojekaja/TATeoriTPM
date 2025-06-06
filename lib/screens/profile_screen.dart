@@ -294,6 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isUpdating = true);
 
     try {
@@ -302,19 +303,21 @@ class _ProfileScreenState extends State<ProfileScreen>
         profilePicPath: _newProfilePic?.path,
       );
 
+      if (!mounted) return;
+      setState(() {
+        _user = _authService.currentUser;
+        _isUpdating = false;
+        _newProfilePic =
+            null; // Reset the new profile pic after successful update
+      });
+
       if (mounted) {
-        setState(() {
-          _user = _authService.currentUser;
-          _isUpdating = false;
-        });
-        Navigator.of(dialogContext).pop();
         _showSuccessSnackBar('Profil berhasil diupdate!');
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isUpdating = false);
-        _showErrorSnackBar('Gagal mengupdate profil: $e');
-      }
+      if (!mounted) return;
+      setState(() => _isUpdating = false);
+      _showErrorSnackBar('Gagal mengupdate profil: $e');
     }
   }
 
@@ -966,6 +969,102 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.blue[300]!.withOpacity(0.2)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.comment_outlined, color: Colors.blue[300]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Kesan dan Pesan',
+                          style: GoogleFonts.inter(
+                            color: Colors.blue[300],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900]?.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.blue[300]!.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kesan:',
+                            style: GoogleFonts.inter(
+                              color: Colors.blue[300],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Terima kasih berkat materi dan tugas dari bapak, saya belajar bahwa ternyata komputer saya kentang.',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900]?.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.blue[300]!.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pesan:',
+                            style: GoogleFonts.inter(
+                              color: Colors.blue[300],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Pak tolong tenggat tugasnya Astaghfirullah, saya sampe ga tau kemarin itu idul adha saking kejar kejarannya ngerjain tugas :( mana saya dapet matkul bapak 3x, 1 lagi berhadiah piring cantik ini.',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 16), // Add spacing
             // Add Logout Button
             Container(
@@ -1082,22 +1181,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
 
+    if (!mounted) return;
     setState(() => _isUpdating = true);
 
     try {
       await _authService.updateProfile(username: username);
+
+      if (!mounted) return;
+      setState(() {
+        _user = _authService.currentUser;
+        _isUpdating = false;
+      });
+
       if (mounted) {
-        setState(() {
-          _user = _authService.currentUser;
-          _isUpdating = false;
-        });
         _showSuccessSnackBar('Username berhasil diupdate!');
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isUpdating = false);
-        _showErrorSnackBar('Gagal mengupdate username: $e');
-      }
+      if (!mounted) return;
+      setState(() => _isUpdating = false);
+      _showErrorSnackBar('Gagal mengupdate username: $e');
     }
   }
 

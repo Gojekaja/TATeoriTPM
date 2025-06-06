@@ -68,6 +68,10 @@ class GameService {
   bool get isAtCheckpoint => checkpointLevels.contains(_currentLevel);
   AuthService get authService => _authService;
 
+  /* #################### UNTUK PENGUJIAN ####################
+  set currentLevel(int value) => _currentLevel = value;
+   #################### AKHIR TESTING SETTER #################### */
+
   // Double Prize Event getters
   bool get isDoublePrizeEventActive => _isDoublePrizeEventActive;
   double get currentDoublePrizeAmount => _currentDoublePrizeAmount;

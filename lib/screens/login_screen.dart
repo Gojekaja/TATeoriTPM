@@ -319,28 +319,39 @@ class _LoginScreenState extends State<LoginScreen>
                         Column(
                           children: [
                             Container(
-                              width: 80,
-                              height: 80,
+                              padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
                                   colors: [
-                                    Colors.blue[400]!,
-                                    Colors.blue[600]!,
+                                    Colors.blue[400]!.withOpacity(0.2),
+                                    Colors.transparent,
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.blue[300]!.withOpacity(0.3),
-                                    blurRadius: 20,
+                                    blurRadius: 30,
                                     spreadRadius: 5,
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.quiz,
-                                size: 40,
-                                color: Colors.white,
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.8, end: 1.0),
+                                duration: const Duration(seconds: 1),
+                                curve: Curves.elasticOut,
+                                builder: (context, value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: child,
+                                  );
+                                },
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  width: 150,
+                                  height: 150,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),

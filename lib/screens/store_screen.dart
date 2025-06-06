@@ -15,9 +15,13 @@ class _StoreScreenState extends State<StoreScreen>
     with TickerProviderStateMixin {
   final StoreService _storeService = StoreService();
   final AuthService _authService = AuthService();
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   List<StoreItem> _topUpItems = [];
   List<StoreItem> _powerUpItems = [];
+  List<StoreItem> _filteredTopUpItems = [];
+  List<StoreItem> _filteredPowerUpItems = [];
+  String _searchQuery = '';
 
   // Animation controllers
   late AnimationController _slideAnimController;
@@ -30,6 +34,7 @@ class _StoreScreenState extends State<StoreScreen>
     super.initState();
     _setupAnimations();
     _loadStoreItems();
+    _searchController.addListener(_onSearchChanged);
   }
 
   void _setupAnimations() {
@@ -55,31 +60,53 @@ class _StoreScreenState extends State<StoreScreen>
     );
   }
 
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _searchQuery = query;
+      _filteredTopUpItems = _topUpItems.where((item) {
+        return item.name.toLowerCase().contains(query) ||
+            item.dolarPrice.toString().contains(query);
+      }).toList();
+      _filteredPowerUpItems = _powerUpItems.where((item) {
+        return item.name.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
+
   Future<void> _loadStoreItems() async {
     setState(() => _isLoading = true);
     try {
-      print('Memuat item toko...');
+      print('memuat barang store...');
+
+      // Initialize store service
+      print('memuat layanan store...');
       await _storeService.init();
 
+      // Get items
+      print('mengambil barang top-up dan power-up...');
       final topUpItems = _storeService.getTopUpItems();
       final powerUpItems = _storeService.getPowerUpItems();
 
-      print(
-        'Memuat ${topUpItems.length} item top-up dan ${powerUpItems.length} item power-up',
-      );
+      print('barang top-up berhasil dimuat: ${topUpItems.length}');
+      print('barang power-up berhasil dimuat: ${powerUpItems.length}');
 
       // If no items are loaded, try resetting the store
       if (topUpItems.isEmpty && powerUpItems.isEmpty) {
-        print('Tidak ada item, mencoba reset toko...');
+        print('tidak ada barang yang ditemukan, mereset store...');
         await _storeService.resetStore();
 
         // Try loading items again after reset
+        print('memuat ulang barang setelah mereset...');
         final resetTopUpItems = _storeService.getTopUpItems();
         final resetPowerUpItems = _storeService.getPowerUpItems();
 
+        print('setelah mereset - barang top-up: ${resetTopUpItems.length}');
+        print('setelah mereset - barang power-up: ${resetPowerUpItems.length}');
+
         if (resetTopUpItems.isEmpty && resetPowerUpItems.isEmpty) {
           throw Exception(
-            'Item toko tidak dapat dimuat meskipun sudah direset',
+            'barang store tidak dapat dimuat meskipun sudah mereset',
           );
         }
 
@@ -94,6 +121,10 @@ class _StoreScreenState extends State<StoreScreen>
         });
       }
 
+      print('barang store berhasil dimuat');
+      print('barang top-up dalam state: ${_topUpItems.length}');
+      print('barang power-up dalam state: ${_powerUpItems.length}');
+
       setState(() => _isLoading = false);
 
       // Start animations
@@ -101,14 +132,14 @@ class _StoreScreenState extends State<StoreScreen>
       await Future.delayed(const Duration(milliseconds: 200));
       _slideAnimController.forward();
     } catch (e, stackTrace) {
-      print('Error memuat item toko:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
+      print('error saat memuat barang store:');
+      print('error: $e');
+      print('trace: $stackTrace');
 
       if (mounted) {
         setState(() => _isLoading = false);
         _showErrorSnackBar(
-          'Gagal memuat item toko. Silakan coba lagi. Jika masalah tetap terjadi, restart aplikasi.',
+          'gagal memuat barang store. silahkan coba lagi. jika masalah tetap terjadi, restart aplikasi.',
         );
       }
     }
@@ -172,7 +203,7 @@ class _StoreScreenState extends State<StoreScreen>
                     const CircularProgressIndicator(color: Colors.amber),
                     const SizedBox(height: 16),
                     Text(
-                      'Memproses pembelian...',
+                      'memproses pembelian...',
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 16,
@@ -185,6 +216,12 @@ class _StoreScreenState extends State<StoreScreen>
           }
 
           if (snapshot.hasError) {
+            String errorMessage = snapshot.error.toString();
+            // Remove 'Exception: ' prefix if it exists
+            if (errorMessage.startsWith('Exception: ')) {
+              errorMessage = errorMessage.substring(10);
+            }
+
             return AlertDialog(
               backgroundColor: Colors.grey[900],
               shape: RoundedRectangleBorder(
@@ -194,19 +231,36 @@ class _StoreScreenState extends State<StoreScreen>
                 children: [
                   Icon(Icons.error_outline, color: Colors.red[400], size: 28),
                   const SizedBox(width: 12),
-                  Text(
-                    'Pembelian Gagal',
-                    style: GoogleFonts.poppins(
-                      color: Colors.red[400],
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Pembelian Gagal',
+                      style: GoogleFonts.poppins(
+                        color: Colors.red[400],
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
-              content: Text(
-                snapshot.error.toString(),
-                style: GoogleFonts.poppins(color: Colors.grey[300]),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: errorMessage
+                    .split('\n')
+                    .map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          line,
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[300],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
               actions: [
                 SizedBox(
@@ -252,9 +306,37 @@ class _StoreScreenState extends State<StoreScreen>
                   ),
                 ],
               ),
-              content: Text(
-                'Saldo tidak cukup untuk membeli power-up ini.',
-                style: GoogleFonts.poppins(color: Colors.grey[300]),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tidak dapat melakukan pembelian karena akan melebihi batas maksimum saldo:',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[300],
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[900]?.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.red[300]!.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'Batas maksimum saldo adalah 10,000,000 Dolar',
+                      style: GoogleFonts.poppins(
+                        color: Colors.red[300],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 SizedBox(
@@ -313,7 +395,7 @@ class _StoreScreenState extends State<StoreScreen>
               ],
             ),
             content: Text(
-              'Pembelian berhasil.',
+              'pembelian berhasil.',
               style: GoogleFonts.poppins(color: Colors.grey[300]),
             ),
           );
@@ -379,8 +461,18 @@ class _StoreScreenState extends State<StoreScreen>
                           item.name,
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.dolarPrice.toStringAsFixed(0)} Dolar',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -472,7 +564,7 @@ class _StoreScreenState extends State<StoreScreen>
         break;
     }
 
-    final isMaxed = owned >= item.maxQuantity;
+    final isMaxed = owned >= 10; // Maximum 10 power-ups per type
 
     return AnimatedBuilder(
       animation: _slideAnimation,
@@ -523,59 +615,50 @@ class _StoreScreenState extends State<StoreScreen>
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(50),
                             ),
-                            child: Icon(icon, color: Colors.white, size: 24),
+                            child: Icon(icon, color: Colors.white, size: 28),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           Text(
                             item.name,
                             style: GoogleFonts.poppins(
                               color: Colors.white,
-                              fontSize: 13,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           if (!isMaxed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
+                            Text(
+                              '${item.dolarPrice.toStringAsFixed(0)} Dolar',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${item.dolarPrice.toStringAsFixed(0)} Dolar',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
+                              horizontal: 10,
+                              vertical: 4,
                             ),
                             decoration: BoxDecoration(
                               color: isMaxed
                                   ? Colors.red.withOpacity(0.2)
                                   : Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               isMaxed
-                                  ? 'MAXED OUT'
-                                  : 'Owned: $owned/${item.maxQuantity}',
+                                  ? 'PENGGUNAAN MAXIMUM'
+                                  : 'Owned: $owned/10',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -661,7 +744,7 @@ class _StoreScreenState extends State<StoreScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tingkatkan pengalaman bermainmu',
+                  'Ayo top up dolar agar saya cepat kaya raya',
                   style: GoogleFonts.poppins(
                     color: Colors.grey[400],
                     fontSize: 14,
@@ -738,8 +821,50 @@ class _StoreScreenState extends State<StoreScreen>
     );
   }
 
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: GoogleFonts.poppins(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Cari barang...',
+          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+          prefixIcon: const Icon(Icons.search, color: Colors.amber),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: () {
+                    _searchController.clear();
+                    FocusScope.of(context).unfocus();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _searchController.dispose();
     _slideAnimController.dispose();
     _fadeAnimController.dispose();
     super.dispose();
@@ -762,7 +887,7 @@ class _StoreScreenState extends State<StoreScreen>
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Memuat Toko...', // Translated
+                    'Memuat store...',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ],
@@ -793,7 +918,7 @@ class _StoreScreenState extends State<StoreScreen>
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.amber),
             onPressed: _loadStoreItems,
-            tooltip: 'Segarkan Toko', // Translated
+            tooltip: 'Refresh Store',
           ),
         ],
       ),
@@ -809,54 +934,100 @@ class _StoreScreenState extends State<StoreScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(),
+                  _buildSearchBar(),
                   const SizedBox(height: 16),
 
-                  _buildSectionTitle(
-                    '💰 Top Up Dolars', // Consider translating "Dolars" if consistent throughout the app
-                    subtitle: 'Tambahkan dana ke akun Anda', // Translated
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio:
-                            0.85, // Reduced from 1.1 to give more vertical space
+                  if (_searchQuery.isNotEmpty &&
+                      _filteredTopUpItems.isEmpty &&
+                      _filteredPowerUpItems.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 64,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No items found',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey[400],
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      itemCount: _topUpItems.length,
-                      itemBuilder: (context, index) =>
-                          _buildTopUpCard(_topUpItems[index], index),
-                    ),
-                  ),
+                    )
+                  else ...[
+                    if (_filteredTopUpItems.isNotEmpty || _searchQuery.isEmpty)
+                      _buildSectionTitle(
+                        '💰 Top Up Dolars',
+                        subtitle: 'Tambahkan dolar ke akun Anda',
+                      ),
+                    const SizedBox(height: 16),
+                    if (_filteredTopUpItems.isNotEmpty || _searchQuery.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 0.85,
+                              ),
+                          itemCount: _searchQuery.isEmpty
+                              ? _topUpItems.length
+                              : _filteredTopUpItems.length,
+                          itemBuilder: (context, index) => _buildTopUpCard(
+                            _searchQuery.isEmpty
+                                ? _topUpItems[index]
+                                : _filteredTopUpItems[index],
+                            index,
+                          ),
+                        ),
+                      ),
 
-                  const SizedBox(height: 32),
-                  _buildSectionTitle(
-                    '⚡ Power Up',
-                    subtitle: 'Maksimal 5 item per jenis', // Translated
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio:
-                            0.75, // Adjusted from 0.9 to give more vertical space
+                    if (_filteredPowerUpItems.isNotEmpty ||
+                        _searchQuery.isEmpty) ...[
+                      const SizedBox(height: 32),
+                      _buildSectionTitle(
+                        '⚡ Power Up',
+                        subtitle: 'Maksimal 10 barang per jenis',
                       ),
-                      itemCount: _powerUpItems.length,
-                      itemBuilder: (context, index) =>
-                          _buildPowerUpCard(_powerUpItems[index], index),
-                    ),
-                  ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 0.75,
+                              ),
+                          itemCount: _searchQuery.isEmpty
+                              ? _powerUpItems.length
+                              : _filteredPowerUpItems.length,
+                          itemBuilder: (context, index) => _buildPowerUpCard(
+                            _searchQuery.isEmpty
+                                ? _powerUpItems[index]
+                                : _filteredPowerUpItems[index],
+                            index,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
 
                   const SizedBox(height: 32),
                 ],

@@ -142,7 +142,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           return;
         }
 
-        if (_gameService.isAtCheckpoint) {
+        // Check if we just completed a checkpoint level
+        if (GameService.checkpointLevels.contains(
+          _gameService.currentLevel - 1,
+        )) {
           _showCheckpointDialog(
             _gameService.calculateReward(_gameService.currentLevel - 1),
           );
@@ -1089,7 +1092,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _continueGameFlow() {
     if (_gameService.currentLevel > 12) {
       _showVictoryDialog(_gameService.calculateReward(12));
-    } else if (_gameService.isAtCheckpoint) {
+    } else if (GameService.checkpointLevels.contains(
+      _gameService.currentLevel - 1,
+    )) {
       _showCheckpointDialog(
         _gameService.calculateReward(_gameService.currentLevel - 1),
       );
@@ -1642,12 +1647,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           'Who Wants to Be a Millionaire?',
           style: GoogleFonts.poppins(
             color: Colors.amber,
-            fontSize: 20,
+            fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
         actions: [
+          /* #################### UNTUK TESTING ####################
+          IconButton(
+            icon: const Icon(Icons.fast_forward_rounded, color: Colors.red),
+            tooltip: 'Skip to next checkpoint (TESTING ONLY)',
+            onPressed: () {
+              // Get next checkpoint or final level
+              int nextLevel = 3; // First checkpoint
+              if (_gameService.currentLevel >= 3) nextLevel = 6;
+              if (_gameService.currentLevel >= 6) nextLevel = 9;
+              if (_gameService.currentLevel >= 9) nextLevel = 12;
+              if (_gameService.currentLevel >= 12) return;
+
+              // Skip to next checkpoint/final level
+              setState(() {
+                _message = "Skipped to level $nextLevel (TESTING)";
+                while (_gameService.currentLevel < nextLevel) {
+                  _gameService.currentLevel++;
+                }
+                _loadNextQuestion();
+              });
+            },
+          ),
+           #################### AKHIR TESTING BUTTON #################### */
+
           // Tombol Power-Up (menggunakan PopupMenuButton)
           PopupMenuButton<String>(
             icon: const Icon(Icons.flash_on_rounded, color: Colors.amber),

@@ -45,29 +45,40 @@ class LocalizationHelper {
     'WITA': 8, // UTC+8 (Central Indonesia)
     'WIT': 9, // UTC+9 (Eastern Indonesia)
     // Other countries
-    'PST': -7,
-    'CST': -5,
+    'PST': -7, // UTC-7 (Pacific Standard Time)
+    'MST': -6, // UTC-6 (Mountain Standard Time)
+    'CST': -5, // UTC-5 (Central Standard Time)
     'EST': -4, // UTC-4 (Eastern Standard Time)
-    'MST': -6, // UTC-4 (EDT - Eastern Daylight Time)
-    'MY': 8, // UTC+8 (Malaysia Time)
-    'SG': 8, // UTC+8 (Singapore Time)
-    'CN': 8, // UTC+8 (China Standard Time)
+    'AST': -4, // UTC-4 (Atlantic Standard Time)
+    'BRT': -3, // UTC-3 (Brasília Time)
+    'GMT': 0, // UTC+0 (Greenwich Mean Time)
+    'CET': 1, // UTC+1 (Central European Time)
+    'EET': 2, // UTC+2 (Eastern European Time)
+    'MSK': 3, // UTC+3 (Moscow Standard Time)
+    'GST': 4, // UTC+4 (Gulf Standard Time)
+    'PKT': 5, // UTC+5 (Pakistan Standard Time)
+    'BDT': 6, // UTC+6 (Bangladesh Standard Time)
+    'MY': 8, // UTC+8 (Malaysia Time - SGT)
+    'SG': 8, // UTC+8 (Singapore Time - SGT)
+    'CST_CN': 8, // UTC+8 (China Standard Time)
     'JP': 9, // UTC+9 (Japan Standard Time)
+    'KST': 9, // UTC+9 (Korea Standard Time)
+    'AEST': 10, // UTC+10 (Australian Eastern Standard Time)
+    'NZDT': 13, // UTC+13 (New Zealand Daylight Time, during DST)
+    'NZST': 12, // UTC+12 (New Zealand Standard Time)
   };
 
   // Format time based on Indonesian timezone
   static String formatLocalTime(DateTime time, String timezone) {
     try {
-      final offset = timezoneOffsets[timezone] ?? 7; // Default to WIB
+      // Convert the input time to UTC first
+      final utcTime = time.toUtc();
 
-      // Get the current UTC offset of the input time
-      final currentOffset = time.timeZoneOffset.inHours;
+      // Get the target timezone offset (in hours)
+      final targetOffset = timezoneOffsets[timezone] ?? 7; // Default to WIB
 
-      // Calculate the difference between desired timezone and current timezone
-      final offsetDiff = offset - currentOffset;
-
-      // Add the difference to get the correct local time
-      final localTime = time.add(Duration(hours: offsetDiff));
+      // Apply the target timezone offset to get the correct local time
+      final localTime = utcTime.add(Duration(hours: targetOffset));
 
       // Format with the timezone suffix
       return '${DateFormat('dd MMM yyyy HH:mm').format(localTime)} $timezone';
@@ -161,8 +172,13 @@ class LocalizationHelper {
 
   // Format date and time with timezone
   static Future<String> formatDateTimeWithTimezone(DateTime dateTime) async {
-    final timezone = await detectTimezone();
-    return formatLocalTime(dateTime, timezone);
+    try {
+      final timezone = await detectTimezone();
+      return formatLocalTime(dateTime, timezone);
+    } catch (e) {
+      // Fallback to WIB if timezone detection fails
+      return formatLocalTime(dateTime, 'WIB');
+    }
   }
 
   // Detect country code based on location

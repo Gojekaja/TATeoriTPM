@@ -5,11 +5,12 @@ import '../models/user.dart';
 import '../utils/currency_converter.dart';
 import '../utils/localization_helper.dart';
 import 'auth_service.dart';
+import 'database_service.dart';
 
 class StoreService {
   static final StoreService _instance = StoreService._internal();
   final AuthService _authService = AuthService();
-  late final Box<StoreItem> _storeBox;
+  final DatabaseService _db = DatabaseService();
 
   factory StoreService() {
     return _instance;
@@ -19,113 +20,92 @@ class StoreService {
 
   Future<void> init() async {
     try {
-      print('Starting store initialization...');
+      print('memulai inisialisasi store...');
 
-      // Initialize Hive if needed
-      try {
-        print('Ensuring Hive is initialized...');
-        await Hive.initFlutter();
-      } catch (e) {
-        print('Hive already initialized');
+      // Wait for database to be initialized if it isn't already
+      if (!_db.isInitialized) {
+        await _db.init();
       }
 
-      // Register the StoreItem adapter
-      if (!Hive.isAdapterRegistered(4)) {
-        print('Registering StoreItem adapter...');
-        Hive.registerAdapter(StoreItemAdapter());
-        print('StoreItem adapter registered successfully');
-      }
-
-      try {
-        // Open the store box
-        print('Opening store box...');
-        _storeBox = await Hive.openBox<StoreItem>('store_items');
+      // Initialize default items if empty
+      if (_db.storeBox.isEmpty) {
+        print('box store kosong, memuat barang default...');
+        await _initializeDefaultItems();
         print(
-          'Store box opened successfully. Items count: ${_storeBox.length}',
+          'barang default berhasil dimuat. jumlah barang: ${_db.storeBox.length}',
+        );
+      } else {
+        print('store memiliki barang yang sudah ada: ${_db.storeBox.length}');
+        // Verify items are valid
+        final topUpItems = getTopUpItems();
+        final powerUpItems = getPowerUpItems();
+        print(
+          'Found ${topUpItems.length} top-up and ${powerUpItems.length} power-up items',
         );
 
-        // Initialize default items if empty
-        if (_storeBox.isEmpty) {
-          print('Store box is empty, initializing default items...');
-          await _initializeDefaultItems();
-          print(
-            'Default items initialized successfully. New count: ${_storeBox.length}',
-          );
-        } else {
-          print('Store already has items: ${_storeBox.length}');
-          // Verify items are valid
-          final topUpItems = getTopUpItems();
-          final powerUpItems = getPowerUpItems();
-          print(
-            'Found ${topUpItems.length} top-up items and ${powerUpItems.length} power-up items',
-          );
-
-          if (topUpItems.isEmpty && powerUpItems.isEmpty) {
-            print('No valid items found, resetting store...');
-            await resetStore();
-          }
+        if (topUpItems.isEmpty && powerUpItems.isEmpty) {
+          print('tidak ada barang yang valid, mereset store...');
+          await resetStore();
         }
-      } catch (boxError) {
-        print('Error with store box: $boxError');
-        print('Attempting to recover...');
-        await resetStore();
       }
     } catch (e, stackTrace) {
-      print('Critical error in store initialization:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
+      print('error kritis saat inisialisasi store:');
+      print('error: $e');
+      print('trace: $stackTrace');
       rethrow;
     }
   }
 
   Future<void> resetStore() async {
     try {
-      print('Starting store reset...');
+      print('memulai mereset store...');
 
-      // Close the box if it's open
-      if (_storeBox != null && _storeBox.isOpen) {
-        print('Closing existing store box...');
-        await _storeBox.close();
-      }
-
-      // Delete the store box from disk
-      print('Deleting store box from disk...');
-      await Hive.deleteBoxFromDisk('store_items');
-      print('Store box deleted successfully');
-
-      // Reopen the box
-      print('Reopening store box...');
-      _storeBox = await Hive.openBox<StoreItem>('store_items');
-      print('Store box reopened successfully');
+      // Clear any existing items
+      print('menghapus semua barang yang sudah ada...');
+      await _db.storeBox.clear();
 
       // Initialize with default items
-      print('Adding default items...');
+      print('menambahkan barang default...');
       await _initializeDefaultItems();
-      print('Store reset complete. Store has ${_storeBox.length} items');
+      print(
+        'mereset store selesai. store sekarang memiliki ${_db.storeBox.length} barang',
+      );
     } catch (e, stackTrace) {
-      print('Error during store reset:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
+      print('error saat mereset store:');
+      print('error: $e');
+      print('trace: $stackTrace');
       rethrow;
     }
   }
 
   Future<void> _initializeDefaultItems() async {
     try {
-      print('Getting default items...');
+      print('memuat barang default...');
       final defaultItems = StoreItem.getDefaultItems();
-      print('Retrieved ${defaultItems.length} default items');
+      print('ditemukan ${defaultItems.length} barang default');
+
+      // Clear existing items first
+      await _db.storeBox.clear();
+      print('menghapus barang yang sudah ada');
 
       for (var item in defaultItems) {
-        print('Adding item: ${item.id} - ${item.name} (${item.type})');
-        await _storeBox.put(item.id, item);
+        print('menambahkan barang: ${item.id} - ${item.name} (${item.type})');
+        await _db.storeBox.put(item.id, item);
       }
 
-      print('All default items added successfully');
+      print('semua barang default berhasil ditambahkan');
+      print('store sekarang memiliki ${_db.storeBox.length} barang');
+
+      // Verify items were added
+      final topUpItems = getTopUpItems();
+      final powerUpItems = getPowerUpItems();
+      print(
+        'verifikasi - ditemukan ${topUpItems.length} barang top-up dan ${powerUpItems.length} barang power-up',
+      );
     } catch (e, stackTrace) {
-      print('Error initializing default items:');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
+      print('error saat memuat barang default:');
+      print('error: $e');
+      print('trace: $stackTrace');
       rethrow;
     }
   }
@@ -134,13 +114,14 @@ class StoreService {
     final user = _authService.currentUser;
     if (user == null) return false;
 
-    final item = _storeBox.get(itemId);
-    if (item == null) throw Exception('Item not found');
-    if (item.type != 'top_up') throw Exception('Invalid item type');
+    final item = _db.storeBox.get(itemId);
+    if (item == null) throw Exception('barang tidak ditemukan');
+    if (item.type != 'top_up') throw Exception('jenis barang tidak valid');
 
     // Check if balance would exceed maximum
-    if (user.dolarBalance + item.dolarPrice > 100000000) {
-      return false;
+    final maxBalance = 10000000.0; // 10 million Dolar limit
+    if (user.dolarBalance + item.dolarPrice > maxBalance) {
+      return false; // Return false instead of throwing exception
     }
 
     // Add purchase record
@@ -166,7 +147,7 @@ class StoreService {
     final user = _authService.currentUser;
     if (user == null) return false;
 
-    final item = _storeBox.get(itemId);
+    final item = _db.storeBox.get(itemId);
     if (item == null) throw Exception('Item not found');
     if (item.type != 'power_up') throw Exception('Invalid item type');
 
@@ -208,31 +189,56 @@ class StoreService {
   }
 
   List<StoreItem> getTopUpItems() {
-    final items = _storeBox.values
-        .where((item) => item.type == 'top_up')
-        .toList();
-    print('Found ${items.length} top-up items');
-    return items;
+    try {
+      print('Getting top-up items...');
+      print('Store box length: ${_db.storeBox.length}');
+      print(
+        'Store box values: ${_db.storeBox.values.map((e) => '${e.id}: ${e.name}').join(', ')}',
+      );
+
+      final items =
+          _db.storeBox.values.where((item) => item.type == 'top_up').toList()
+            ..sort((a, b) => a.dolarPrice.compareTo(b.dolarPrice));
+
+      print('Found ${items.length} top-up items:');
+      for (var item in items) {
+        print('- ${item.id}: ${item.name} (${item.dolarPrice} Dolar)');
+      }
+      return items;
+    } catch (e, stackTrace) {
+      print('Error getting top-up items:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      return [];
+    }
   }
 
   List<StoreItem> getPowerUpItems() {
-    final items = _storeBox.values
-        .where((item) => item.type == 'power_up')
-        .toList();
-    print('Found ${items.length} power-up items');
-    return items;
+    try {
+      print('Getting power-up items...');
+      final items = _db.storeBox.values
+          .where((item) => item.type == 'power_up')
+          .toList();
+      print('Found ${items.length} power-up items:');
+      for (var item in items) {
+        print('- ${item.id}: ${item.name}');
+      }
+      return items;
+    } catch (e) {
+      print('Error getting power-up items: $e');
+      return [];
+    }
   }
 
   Future<String> getLocalizedPrice(double dolarAmount) async {
     try {
       final idrAmount = CurrencyConverter.dolarToRupiah(dolarAmount);
       final countryCode = await LocalizationHelper.detectCountryCode();
-      final dolarText = CurrencyConverter.formatDolar(dolarAmount);
       final localPrice = LocalizationHelper.formatLocalPrice(
         idrAmount.toInt(),
         countryCode,
       );
-      return '$dolarText ($localPrice)';
+      return localPrice;
     } catch (e) {
       // If anything fails, just show the dolar amount
       return CurrencyConverter.formatDolar(dolarAmount);
